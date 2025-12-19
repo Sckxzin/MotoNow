@@ -7,18 +7,26 @@
 </head>
 <body>
 
-  <div class="topbar">
+  <!-- TOPO -->
+  <header class="topbar">
     <h1>MotoNow - Vendas</h1>
     <button onclick="logout()">Sair</button>
-  </div>
+  </header>
 
-  <div class="container">
+  <!-- CONTEÚDO -->
+  <main class="container">
 
-    <div class="produtos">
+    <!-- PRODUTOS -->
+    <section class="produtos">
       <h2>Produtos</h2>
 
+      <!-- FILTROS -->
       <div class="filtros">
-        <input id="filtroTexto" placeholder="Código ou nome">
+        <input 
+          id="filtroTexto" 
+          placeholder="Código ou nome do produto"
+        >
+
         <select id="filtroTipo">
           <option value="">Todos</option>
           <option value="PECA">Peças</option>
@@ -28,17 +36,34 @@
         </select>
       </div>
 
-      <ul id="listaProdutos"></ul>
-    </div>
+      <!-- LISTA DE PRODUTOS -->
+      <ul id="listaProdutos">
+        <!-- preenchido via JS -->
+      </ul>
+    </section>
 
-    <div class="carrinho">
+    <!-- CARRINHO -->
+    <section class="carrinho">
       <h2>Carrinho</h2>
-      <ul id="listaCarrinho"></ul>
-      <button onclick="finalizarVenda()">Finalizar Venda</button>
-    </div>
 
-  </div>
+      <ul id="listaCarrinho">
+        <!-- preenchido via JS -->
+      </ul>
 
-<script src="app.js"></script>
+      <!-- FORMA DE PAGAMENTO (LIVRE) -->
+      <input
+        id="formaPagamento"
+        placeholder="Forma de pagamento (Pix, Dinheiro, Cartão, etc)"
+      >
+
+      <!-- FINALIZAR -->
+      <button onclick="finalizarVenda()">
+        Finalizar Venda
+      </button>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
