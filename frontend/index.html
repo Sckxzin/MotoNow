@@ -1,35 +1,19 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>MotoNow | Estoque</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>MotoNow - Login</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="login-page">
 
-<div class="login" id="loginBox">
-  <h2>Login</h2>
-  <input id="login" placeholder="Login">
-  <input id="senha" type="password" placeholder="Senha">
-  <button onclick="login()">Entrar</button>
-</div>
-
-<div class="app hidden" id="app">
-  <header>
-    <h1>MotoNow - Estoque</h1>
-    <button onclick="logout()">Sair</button>
-  </header>
-
-  <nav>
-    <button onclick="mostrar('produtos')">Peças</button>
-    <button onclick="mostrar('carrinho')">Carrinho</button>
-  </nav>
-
-  <main>
-    <section id="produtos"></section>
-    <section id="carrinho" class="hidden"></section>
-  </main>
-</div>
+  <div class="login-box">
+    <h1>MotoNow</h1>
+    <input id="login" placeholder="Login">
+    <input id="senha" type="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <p id="erro"></p>
+  </div>
 
 <script src="app.js"></script>
 </body>
