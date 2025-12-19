@@ -106,15 +106,61 @@ function remover(index) {
 /* =========================
    FINALIZAR
 ========================= */
-function finalizarVenda() {
+async function finalizarVenda() {
   if (carrinho.length === 0) {
     alert("Carrinho vazio");
     return;
   }
 
-  alert("Venda finalizada (backend entra depois)");
-  carrinho = [];
-  renderCarrinho();
+  const token = localStorage.getItem("token");
+
+  try {
+    /* 1️⃣ Criar a venda */
+    const vendaRes = await fetch(`${API}/vendas`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ tipo: "VENDA" })
+    });
+
+    const vendaData = await vendaRes.json();
+    const vendaId = vendaData.venda_id;
+
+    /* 2️⃣ Adicionar itens */
+    for (const item of carrinho) {
+      await fetch(`${API}/vendas/${vendaId}/itens`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          produto_id: item.id,
+          quantidade: 1,
+          valor_unitario: item.valor_sugerido
+        })
+      });
+    }
+
+    /* 3️⃣ Finalizar venda */
+    await fetch(`${API}/vendas/${vendaId}/finalizar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    alert("Venda registrada com sucesso!");
+
+    carrinho = [];
+    renderCarrinho();
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao finalizar venda");
+  }
 }
 
 /* =========================
