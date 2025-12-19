@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>MotoNow - Vendas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>MotoNow - Vendas</h1>
+  <button onclick="logout()">Sair</button>
+</header>
+
+<main class="container">
+
+  <section class="produtos">
+    <h2>Produtos</h2>
+
+    <!-- FILTROS -->
+    <div class="filtros">
+      <input type="text" id="filtroCodigo" placeholder="Código">
+      <input type="text" id="filtroModelo" placeholder="Modelo da moto">
+
+      <select id="filtroTipo">
+        <option value="">Todos</option>
+        <option value="PECA">Peça</option>
+        <option value="REVISAO">Revisão</option>
+        <option value="OLEO">Óleo</option>
+        <option value="CAPACETE">Capacete</option>
+      </select>
+    </div>
+
+    <ul id="listaProdutos"></ul>
+  </section>
+
+  <section class="carrinho">
+    <h2>Carrinho</h2>
+    <ul id="listaCarrinho"></ul>
+    <button onclick="finalizarVenda()">Finalizar Venda</button>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
