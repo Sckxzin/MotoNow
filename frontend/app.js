@@ -1,90 +1,129 @@
 const API = "https://motonow-production.up.railway.app";
+
+let produtos = [];
 let carrinho = [];
 
-/* LOGIN */
+/* =========================
+   LOGIN
+========================= */
 async function login() {
   const login = document.getElementById("login").value;
   const senha = document.getElementById("senha").value;
 
-  const res = await fetch(`${API}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ login, senha })
-  });
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login, senha })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.token) {
+    if (!res.ok) {
+      document.getElementById("erro").innerText = data.message || "Erro no login";
+      return;
+    }
+
     localStorage.setItem("token", data.token);
-    window.location = "app.html";
-  } else {
-    document.getElementById("erro").innerText = "Login inválido";
+    window.location.href = "vendas.html";
+
+  } catch {
+    document.getElementById("erro").innerText = "Erro de conexão";
   }
 }
 
-/* LOGOUT */
 function logout() {
-  localStorage.clear();
-  window.location = "index.html";
+  localStorage.removeItem("token");
+  window.location.href = "index.html";
 }
 
-/* PRODUTOS */
+/* =========================
+   PRODUTOS
+========================= */
 async function carregarProdutos() {
+  const token = localStorage.getItem("token");
+  if (!token) return logout();
+
   const res = await fetch(`${API}/produtos`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`
-    }
+    headers: { Authorization: `Bearer ${token}` }
   });
 
-  const produtos = await res.json();
-  const div = document.getElementById("produtos");
-
-  produtos.forEach(p => {
-    const el = document.createElement("div");
-    el.innerHTML = `
-      <p>${p.nome} - R$ ${p.valor_sugerido}</p>
-      <button onclick='addCarrinho(${JSON.stringify(p)})'>Adicionar</button>
-    `;
-    div.appendChild(el);
-  });
+  produtos = await res.json();
+  renderProdutos();
 }
 
-/* CARRINHO */
+function renderProdutos() {
+  const lista = document.getElementById("listaProdutos");
+  if (!lista) return;
+
+  const texto = document.getElementById("filtroTexto").value.toLowerCase();
+  const tipo = document.getElementById("filtroTipo").value;
+
+  lista.innerHTML = "";
+
+  produtos
+    .filter(p =>
+      (!texto || p.nome.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto)) &&
+      (!tipo || p.tipo === tipo)
+    )
+    .forEach(p => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${p.nome} - R$ ${Number(p.valor_sugerido).toFixed(2)}</span>
+        <button onclick='addCarrinho(${JSON.stringify(p)})'>Adicionar</button>
+      `;
+      lista.appendChild(li);
+    });
+}
+
+/* =========================
+   CARRINHO
+========================= */
 function addCarrinho(produto) {
-  carrinho.push({
-    produto_id: produto.id,
-    nome: produto.nome,
-    valor: produto.valor_sugerido,
-    quantidade: 1
-  });
+  carrinho.push({ ...produto });
   renderCarrinho();
 }
 
 function renderCarrinho() {
-  const div = document.getElementById("carrinho");
-  div.innerHTML = "";
-  carrinho.forEach(i => {
-    div.innerHTML += `<p>${i.nome} - R$ ${i.valor}</p>`;
+  const lista = document.getElementById("listaCarrinho");
+  lista.innerHTML = "";
+
+  carrinho.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${p.nome} - R$ ${Number(p.valor_sugerido).toFixed(2)}</span>
+      <button onclick="remover(${i})">X</button>
+    `;
+    lista.appendChild(li);
   });
 }
 
-/* FINALIZAR */
-async function finalizarVenda() {
-  await fetch(`${API}/vendas`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("token")}`
-    },
-    body: JSON.stringify({ itens: carrinho })
-  });
+function remover(index) {
+  carrinho.splice(index, 1);
+  renderCarrinho();
+}
 
-  alert("Venda realizada!");
+/* =========================
+   FINALIZAR
+========================= */
+function finalizarVenda() {
+  if (carrinho.length === 0) {
+    alert("Carrinho vazio");
+    return;
+  }
+
+  alert("Venda finalizada (backend entra depois)");
   carrinho = [];
   renderCarrinho();
 }
 
-/* AUTOLOAD */
-if (window.location.pathname.includes("app.html")) {
-  carregarProdutos();
-}
+/* =========================
+   AUTO LOAD
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.getElementById("listaProdutos")) {
+    carregarProdutos();
+    document.getElementById("filtroTexto").oninput = renderProdutos;
+    document.getElementById("filtroTipo").onchange = renderProdutos;
+  }
+});
