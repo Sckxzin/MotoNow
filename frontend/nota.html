@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Nota de Venda - MotoNow</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="nota-page">
+
+<div class="nf-container">
+
+  <!-- TOPO -->
+  <div class="nf-header">
+    <div class="nf-line"></div>
+    <p class="nf-identificacao">IDENTIFICAÇÃO DO EMITENTE</p>
+
+    <h2 class="nf-title">MOTONOW COMÉRCIO DE MOTOCICLETAS LTDA</h2>
+    <p class="nf-text">
+      Av. Comendador José Pereira, 695<br>
+      Escada - PE • Tel: (81) 99302-4733
+    </p>
+
+    <div class="nf-line"></div>
+  </div>
+
+  <!-- CLIENTE -->
+  <h3 class="nf-section">DADOS DO CLIENTE</h3>
+  <div class="nf-box">
+    <p><b>Nome:</b> <span id="nfCliente"></span></p>
+    <p><b>CPF:</b> <span id="nfCpf"></span></p>
+    <p><b>Telefone:</b> <span id="nfTelefone"></span></p>
+  </div>
+
+  <!-- ITENS -->
+  <h3 class="nf-section">ITENS DA VENDA</h3>
+  <div class="nf-box">
+    <table class="nf-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descrição</th>
+          <th>Qtd</th>
+          <th>Valor</th>
+        </tr>
+      </thead>
+      <tbody id="nfItens"></tbody>
+    </table>
+  </div>
+
+  <!-- VALORES -->
+  <h3 class="nf-section">VALORES</h3>
+  <div class="nf-box">
+    <p><b>Total:</b> R$ <span id="nfTotal"></span></p>
+    <p><b>Forma de Pagamento:</b> <span id="nfPagamento"></span></p>
+    <p><b>Data da Venda:</b> <span id="nfData"></span></p>
+  </div>
+
+  <button class="nf-print" onclick="window.print()">🖨 Imprimir Nota</button>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
