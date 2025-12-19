@@ -7,40 +7,37 @@
 </head>
 <body>
 
-<header class="topbar">
-  <h1>MotoNow - Vendas</h1>
-  <button onclick="logout()">Sair</button>
-</header>
+  <div class="topbar">
+    <h1>MotoNow - Vendas</h1>
+    <button onclick="logout()">Sair</button>
+  </div>
 
-<main class="container">
+  <div class="container">
 
-  <section class="produtos">
-    <h2>Produtos</h2>
+    <div class="produtos">
+      <h2>Produtos</h2>
 
-    <!-- FILTROS -->
-    <div class="filtros">
-      <input type="text" id="filtroCodigo" placeholder="Código">
-      <input type="text" id="filtroModelo" placeholder="Modelo da moto">
+      <div class="filtros">
+        <input id="filtroTexto" placeholder="Código ou nome">
+        <select id="filtroTipo">
+          <option value="">Todos</option>
+          <option value="PECA">Peças</option>
+          <option value="OLEO">Óleo</option>
+          <option value="CAPACETE">Capacete</option>
+          <option value="REVISAO">Revisão</option>
+        </select>
+      </div>
 
-      <select id="filtroTipo">
-        <option value="">Todos</option>
-        <option value="PECA">Peça</option>
-        <option value="REVISAO">Revisão</option>
-        <option value="OLEO">Óleo</option>
-        <option value="CAPACETE">Capacete</option>
-      </select>
+      <ul id="listaProdutos"></ul>
     </div>
 
-    <ul id="listaProdutos"></ul>
-  </section>
+    <div class="carrinho">
+      <h2>Carrinho</h2>
+      <ul id="listaCarrinho"></ul>
+      <button onclick="finalizarVenda()">Finalizar Venda</button>
+    </div>
 
-  <section class="carrinho">
-    <h2>Carrinho</h2>
-    <ul id="listaCarrinho"></ul>
-    <button onclick="finalizarVenda()">Finalizar Venda</button>
-  </section>
-
-</main>
+  </div>
 
 <script src="app.js"></script>
 </body>
