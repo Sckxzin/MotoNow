@@ -173,3 +173,30 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filtroTipo").onchange = renderProdutos;
   }
 });
+document.addEventListener("DOMContentLoaded", () => {
+  const nota = localStorage.getItem("notaFiscal");
+  if (!nota) return;
+
+  const data = JSON.parse(nota);
+
+  document.getElementById("nfCliente").innerText = data.cliente.nome;
+  document.getElementById("nfCpf").innerText = data.cliente.cpf;
+  document.getElementById("nfTelefone").innerText = data.cliente.telefone;
+
+  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
+  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
+  document.getElementById("nfData").innerText =
+    new Date(data.data).toLocaleString("pt-BR");
+
+  const tbody = document.getElementById("nfItens");
+  data.itens.forEach(i => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i.codigo}</td>
+      <td>${i.nome}</td>
+      <td>${i.quantidade}</td>
+      <td>R$ ${Number(i.valor).toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+});
