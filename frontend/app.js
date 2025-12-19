@@ -112,23 +112,28 @@ async function finalizarVenda() {
     return;
   }
 
+  const formaPagamento = document.getElementById("formaPagamento").value;
+  if (!formaPagamento) {
+    alert("Informe a forma de pagamento");
+    return;
+  }
+
   const token = localStorage.getItem("token");
 
   try {
-    /* 1️⃣ Criar a venda */
+    // 1️⃣ Criar venda
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ tipo: "VENDA" })
+      }
     });
 
     const vendaData = await vendaRes.json();
     const vendaId = vendaData.venda_id;
 
-    /* 2️⃣ Adicionar itens */
+    // 2️⃣ Itens
     for (const item of carrinho) {
       await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
@@ -144,24 +149,42 @@ async function finalizarVenda() {
       });
     }
 
-    /* 3️⃣ Finalizar venda */
+    // 3️⃣ Finalizar venda
     await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    alert("Venda registrada com sucesso!");
+    // 4️⃣ Salvar NOTA (igual sistema antigo)
+    localStorage.setItem("notaFiscal", JSON.stringify({
+      cliente: {
+        nome: "Cliente balcão",
+        cpf: "-",
+        telefone: "-"
+      },
+      itens: carrinho.map(i => ({
+        codigo: i.codigo,
+        nome: i.nome,
+        quantidade: 1,
+        valor: i.valor_sugerido
+      })),
+      total: carrinho.reduce((s, i) => s + Number(i.valor_sugerido), 0),
+      forma_pagamento: formaPagamento,
+      data: new Date()
+    }));
 
     carrinho = [];
     renderCarrinho();
+
+    // 5️⃣ ABRE NOTA AUTOMATICAMENTE
+    window.location.href = "nota.html";
 
   } catch (err) {
     console.error(err);
     alert("Erro ao finalizar venda");
   }
 }
+
 
 /* =========================
    AUTO LOAD
