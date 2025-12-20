@@ -258,3 +258,20 @@ li button,
     display: none;
   }
 }
+.dados-cliente,
+.dados-moto {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dados-cliente input,
+.dados-moto input {
+  padding: 8px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+}
+
