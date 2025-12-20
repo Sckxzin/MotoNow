@@ -20,7 +20,8 @@ async function login() {
     const data = await res.json();
 
     if (!res.ok) {
-      document.getElementById("erro").innerText = data.message || "Erro no login";
+      document.getElementById("erro").innerText =
+        data.message || "Erro no login";
       return;
     }
 
@@ -55,21 +56,27 @@ function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
   if (!lista) return;
 
-  const texto = document.getElementById("filtroTexto").value.toLowerCase();
+  const texto = document
+    .getElementById("filtroTexto")
+    .value.toLowerCase();
   const tipo = document.getElementById("filtroTipo").value;
 
   lista.innerHTML = "";
 
   produtos
     .filter(p =>
-      (!texto || p.nome.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto)) &&
+      (!texto ||
+        p.nome.toLowerCase().includes(texto) ||
+        p.codigo.toLowerCase().includes(texto)) &&
       (!tipo || p.tipo === tipo)
     )
     .forEach(p => {
       const li = document.createElement("li");
       li.innerHTML = `
         <span>${p.nome} - R$ ${Number(p.valor_sugerido).toFixed(2)}</span>
-        <button onclick='addCarrinho(${JSON.stringify(p)})'>Adicionar</button>
+        <button onclick='addCarrinho(${JSON.stringify(p)})'>
+          Adicionar
+        </button>
       `;
       lista.appendChild(li);
     });
@@ -96,7 +103,7 @@ function renderCarrinho() {
     lista.appendChild(li);
   });
 
-  // Mostrar dados da moto se houver revisão
+  // Mostrar dados da moto apenas se houver revisão
   const temRevisao = carrinho.some(i => i.tipo === "REVISAO");
   const dadosMoto = document.getElementById("dadosMoto");
   if (dadosMoto) {
@@ -128,6 +135,14 @@ async function finalizarVenda() {
     return;
   }
 
+  // Forma de pagamento
+  const formaPagamento =
+    document.getElementById("formaPagamento").value;
+  if (!formaPagamento) {
+    alert("Informe a forma de pagamento");
+    return;
+  }
+
   // Revisão
   const temRevisao = carrinho.some(i => i.tipo === "REVISAO");
   let modeloMoto = null;
@@ -143,29 +158,28 @@ async function finalizarVenda() {
     }
   }
 
-  // Pagamento
-  const formaPagamento = document.getElementById("formaPagamento").value;
-  if (!formaPagamento) {
-    alert("Informe a forma de pagamento");
-    return;
-  }
-
   const token = localStorage.getItem("token");
 
   try {
-    // Criar venda
+    /* 1️⃣ Criar venda COM dados do cliente */
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
-      }
+      },
+      body: JSON.stringify({
+        cliente_nome: nome,
+        cliente_cpf: cpf,
+        cliente_telefone: telefone,
+        forma_pagamento: formaPagamento
+      })
     });
 
     const vendaData = await vendaRes.json();
     const vendaId = vendaData.venda_id;
 
-    // Itens
+    /* 2️⃣ Itens */
     for (const item of carrinho) {
       await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
@@ -181,13 +195,13 @@ async function finalizarVenda() {
       });
     }
 
-    // Finalizar venda
+    /* 3️⃣ Finalizar venda */
     await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    // Salvar nota
+    /* 4️⃣ Salvar NOTA */
     localStorage.setItem("notaFiscal", JSON.stringify({
       cliente: { nome, cpf, telefone },
       moto: temRevisao ? { modelo: modeloMoto, chassi: chassiMoto } : null,
@@ -197,13 +211,18 @@ async function finalizarVenda() {
         quantidade: 1,
         valor: i.valor_sugerido
       })),
-      total: carrinho.reduce((s, i) => s + Number(i.valor_sugerido), 0),
+      total: carrinho.reduce(
+        (s, i) => s + Number(i.valor_sugerido),
+        0
+      ),
       forma_pagamento: formaPagamento,
       data: new Date()
     }));
 
     carrinho = [];
     renderCarrinho();
+
+    /* 5️⃣ Abrir nota automaticamente */
     window.location.href = "nota.html";
 
   } catch (err) {
@@ -216,13 +235,14 @@ async function finalizarVenda() {
    AUTO LOAD
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
+  // Vendas
   if (document.getElementById("listaProdutos")) {
     carregarProdutos();
     document.getElementById("filtroTexto").oninput = renderProdutos;
     document.getElementById("filtroTipo").onchange = renderProdutos;
   }
 
-  // NOTA
+  // Nota
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
 
@@ -231,13 +251,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("nfCliente")) {
     document.getElementById("nfCliente").innerText = data.cliente.nome;
     document.getElementById("nfCpf").innerText = data.cliente.cpf;
-    document.getElementById("nfTelefone").innerText = data.cliente.telefone;
-    document.getElementById("nfTotal").innerText = data.total.toFixed(2);
-    document.getElementById("nfPagamento").innerText = data.forma_pagamento;
+    document.getElementById("nfTelefone").innerText =
+      data.cliente.telefone;
+    document.getElementById("nfTotal").innerText =
+      data.total.toFixed(2);
+    document.getElementById("nfPagamento").innerText =
+      data.forma_pagamento;
     document.getElementById("nfData").innerText =
       new Date(data.data).toLocaleString("pt-BR");
 
     const tbody = document.getElementById("nfItens");
+    tbody.innerHTML = "";
+
     data.itens.forEach(i => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
