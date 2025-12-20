@@ -26,7 +26,6 @@ async function login() {
 
     localStorage.setItem("token", data.token);
     window.location.href = "vendas.html";
-
   } catch {
     document.getElementById("erro").innerText = "Erro de conexão";
   }
@@ -96,6 +95,13 @@ function renderCarrinho() {
     `;
     lista.appendChild(li);
   });
+
+  // Mostrar dados da moto se houver revisão
+  const temRevisao = carrinho.some(i => i.tipo === "REVISAO");
+  const dadosMoto = document.getElementById("dadosMoto");
+  if (dadosMoto) {
+    dadosMoto.style.display = temRevisao ? "block" : "none";
+  }
 }
 
 function remover(index) {
@@ -104,7 +110,7 @@ function remover(index) {
 }
 
 /* =========================
-   FINALIZAR
+   FINALIZAR VENDA
 ========================= */
 async function finalizarVenda() {
   if (carrinho.length === 0) {
@@ -112,6 +118,32 @@ async function finalizarVenda() {
     return;
   }
 
+  // Dados do cliente
+  const nome = document.getElementById("clienteNome").value;
+  const cpf = document.getElementById("clienteCpf").value;
+  const telefone = document.getElementById("clienteTelefone").value;
+
+  if (!nome || !cpf || !telefone) {
+    alert("Preencha os dados do cliente");
+    return;
+  }
+
+  // Revisão
+  const temRevisao = carrinho.some(i => i.tipo === "REVISAO");
+  let modeloMoto = null;
+  let chassiMoto = null;
+
+  if (temRevisao) {
+    modeloMoto = document.getElementById("modeloMoto").value;
+    chassiMoto = document.getElementById("chassiMoto").value;
+
+    if (!modeloMoto || !chassiMoto) {
+      alert("Informe modelo e chassi da moto");
+      return;
+    }
+  }
+
+  // Pagamento
   const formaPagamento = document.getElementById("formaPagamento").value;
   if (!formaPagamento) {
     alert("Informe a forma de pagamento");
@@ -121,7 +153,7 @@ async function finalizarVenda() {
   const token = localStorage.getItem("token");
 
   try {
-    // 1️⃣ Criar venda
+    // Criar venda
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
@@ -133,7 +165,7 @@ async function finalizarVenda() {
     const vendaData = await vendaRes.json();
     const vendaId = vendaData.venda_id;
 
-    // 2️⃣ Itens
+    // Itens
     for (const item of carrinho) {
       await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
@@ -149,19 +181,16 @@ async function finalizarVenda() {
       });
     }
 
-    // 3️⃣ Finalizar venda
+    // Finalizar venda
     await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    // 4️⃣ Salvar NOTA (igual sistema antigo)
+    // Salvar nota
     localStorage.setItem("notaFiscal", JSON.stringify({
-      cliente: {
-        nome: "Cliente balcão",
-        cpf: "-",
-        telefone: "-"
-      },
+      cliente: { nome, cpf, telefone },
+      moto: temRevisao ? { modelo: modeloMoto, chassi: chassiMoto } : null,
       itens: carrinho.map(i => ({
         codigo: i.codigo,
         nome: i.nome,
@@ -175,8 +204,6 @@ async function finalizarVenda() {
 
     carrinho = [];
     renderCarrinho();
-
-    // 5️⃣ ABRE NOTA AUTOMATICAMENTE
     window.location.href = "nota.html";
 
   } catch (err) {
@@ -184,7 +211,6 @@ async function finalizarVenda() {
     alert("Erro ao finalizar venda");
   }
 }
-
 
 /* =========================
    AUTO LOAD
@@ -195,31 +221,32 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filtroTexto").oninput = renderProdutos;
     document.getElementById("filtroTipo").onchange = renderProdutos;
   }
-});
-document.addEventListener("DOMContentLoaded", () => {
+
+  // NOTA
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
 
   const data = JSON.parse(nota);
 
-  document.getElementById("nfCliente").innerText = data.cliente.nome;
-  document.getElementById("nfCpf").innerText = data.cliente.cpf;
-  document.getElementById("nfTelefone").innerText = data.cliente.telefone;
+  if (document.getElementById("nfCliente")) {
+    document.getElementById("nfCliente").innerText = data.cliente.nome;
+    document.getElementById("nfCpf").innerText = data.cliente.cpf;
+    document.getElementById("nfTelefone").innerText = data.cliente.telefone;
+    document.getElementById("nfTotal").innerText = data.total.toFixed(2);
+    document.getElementById("nfPagamento").innerText = data.forma_pagamento;
+    document.getElementById("nfData").innerText =
+      new Date(data.data).toLocaleString("pt-BR");
 
-  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
-  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
-  document.getElementById("nfData").innerText =
-    new Date(data.data).toLocaleString("pt-BR");
-
-  const tbody = document.getElementById("nfItens");
-  data.itens.forEach(i => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${i.codigo}</td>
-      <td>${i.nome}</td>
-      <td>${i.quantidade}</td>
-      <td>R$ ${Number(i.valor).toFixed(2)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+    const tbody = document.getElementById("nfItens");
+    data.itens.forEach(i => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i.codigo}</td>
+        <td>${i.nome}</td>
+        <td>${i.quantidade}</td>
+        <td>R$ ${Number(i.valor).toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 });
