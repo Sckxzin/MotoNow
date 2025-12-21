@@ -4,9 +4,20 @@ const auth = require("../middlewares/auth");
 
 const router = express.Router();
 
-// listar produtos
+// listar produtos (filtrado por filial)
 router.get("/", auth, (req, res) => {
-  db.query("SELECT * FROM produtos", (err, rows) => {
+  const { perfil, filial } = req.user;
+
+  let sql = "SELECT * FROM produtos";
+  let params = [];
+
+  // Se NÃO for diretoria, filtra pela filial
+  if (perfil !== "DIRETORIA") {
+    sql += " WHERE filial = ?";
+    params.push(filial);
+  }
+
+  db.query(sql, params, (err, rows) => {
     if (err) return res.status(500).json(err);
     res.json(rows);
   });
