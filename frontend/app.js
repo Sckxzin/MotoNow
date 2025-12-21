@@ -30,7 +30,7 @@ async function login() {
 
     localStorage.setItem("token", data.token);
     window.location.href = "vendas.html";
-  } catch (err) {
+  } catch {
     document.getElementById("erro").innerText = "Erro de conexão";
   }
 }
@@ -41,7 +41,7 @@ function logout() {
 }
 
 // ===============================
-// PRODUTOS (FILTRADOS POR FILIAL NO BACKEND)
+// PRODUTOS
 // ===============================
 async function carregarProdutos() {
   const token = localStorage.getItem("token");
@@ -58,7 +58,7 @@ async function carregarProdutos() {
 
     produtos = await res.json();
     renderProdutos();
-  } catch (err) {
+  } catch {
     alert("Erro ao carregar produtos");
   }
 }
@@ -69,6 +69,7 @@ function renderProdutos() {
 
   const texto = document.getElementById("filtroTexto").value.toLowerCase();
   const tipo = document.getElementById("filtroTipo").value;
+  const modelo = document.getElementById("filtroModelo").value;
 
   lista.innerHTML = "";
 
@@ -77,17 +78,16 @@ function renderProdutos() {
       (!texto ||
         p.nome.toLowerCase().includes(texto) ||
         p.codigo.toLowerCase().includes(texto)) &&
-      (!tipo || p.tipo === tipo)
+      (!tipo || p.tipo === tipo) &&
+      (!modelo || p.modelo === modelo)
     )
     .forEach(p => {
       const li = document.createElement("li");
       li.innerHTML = `
         <span>
-          ${p.codigo} - ${p.nome}
-          ${p.modelo ? `(${p.modelo})` : ""}
-          <br>
+          <b>${p.codigo}</b> - ${p.nome}<br>
+          Modelo: ${p.modelo} | Estoque: ${p.estoque}<br>
           <b>R$ ${Number(p.valor_sugerido).toFixed(2)}</b>
-          <small> | Estoque: ${p.estoque}</small>
         </span>
         <button onclick='addCarrinho(${JSON.stringify(p)})'>
           Adicionar
@@ -101,13 +101,22 @@ function renderProdutos() {
 // CARRINHO
 // ===============================
 function addCarrinho(produto) {
-  carrinho.push({ ...produto, quantidade: 1 });
+  carrinho.push({
+    ...produto,
+    quantidade: 1,
+    valor_editado: Number(produto.valor_sugerido)
+  });
   renderCarrinho();
 }
 
 function remover(index) {
   carrinho.splice(index, 1);
   renderCarrinho();
+}
+
+function alterarValor(index, novoValor) {
+  carrinho[index].valor_editado = Number(novoValor);
+  atualizarTotal();
 }
 
 function renderCarrinho() {
@@ -117,13 +126,43 @@ function renderCarrinho() {
   carrinho.forEach((p, i) => {
     const li = document.createElement("li");
     li.innerHTML = `
-      <span>
-        ${p.nome} - R$ ${Number(p.valor_sugerido).toFixed(2)}
-      </span>
-      <button onclick="remover(${i})">X</button>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <b>${p.nome}</b>
+
+        <label>
+          Valor (R$):
+          <input
+            type="number"
+            step="0.01"
+            value="${p.valor_editado}"
+            onchange="alterarValor(${i}, this.value)"
+          >
+        </label>
+
+        <button onclick="remover(${i})">Remover</button>
+      </div>
     `;
     lista.appendChild(li);
   });
+
+  atualizarTotal();
+}
+
+function atualizarTotal() {
+  const total = carrinho.reduce(
+    (s, i) => s + Number(i.valor_editado), 0
+  );
+
+  let totalDiv = document.getElementById("totalCarrinho");
+  if (!totalDiv) {
+    totalDiv = document.createElement("div");
+    totalDiv.id = "totalCarrinho";
+    totalDiv.style.marginTop = "10px";
+    totalDiv.style.fontWeight = "bold";
+    document.querySelector(".carrinho").appendChild(totalDiv);
+  }
+
+  totalDiv.innerText = `Total: R$ ${total.toFixed(2)}`;
 }
 
 // ===============================
@@ -171,7 +210,7 @@ async function finalizarVenda() {
     const vendaData = await vendaRes.json();
     const vendaId = vendaData.venda_id;
 
-    // 2️⃣ Itens da venda
+    // 2️⃣ Itens
     for (const item of carrinho) {
       await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
@@ -182,7 +221,7 @@ async function finalizarVenda() {
         body: JSON.stringify({
           produto_id: item.id,
           quantidade: 1,
-          valor_unitario: item.valor_sugerido
+          valor_unitario: item.valor_editado
         })
       });
     }
@@ -195,21 +234,17 @@ async function finalizarVenda() {
       }
     });
 
-    // 4️⃣ Salvar NOTA
+    // 4️⃣ Nota
     localStorage.setItem("notaFiscal", JSON.stringify({
-      cliente: {
-        nome,
-        cpf,
-        telefone
-      },
+      cliente: { nome, cpf, telefone },
       itens: carrinho.map(i => ({
         codigo: i.codigo,
         nome: i.nome,
         quantidade: 1,
-        valor: i.valor_sugerido
+        valor: i.valor_editado
       })),
       total: carrinho.reduce(
-        (s, i) => s + Number(i.valor_sugerido), 0
+        (s, i) => s + Number(i.valor_editado), 0
       ),
       forma_pagamento: formaPagamento,
       data: new Date()
@@ -218,7 +253,6 @@ async function finalizarVenda() {
     carrinho = [];
     renderCarrinho();
 
-    // 5️⃣ Abre nota automaticamente
     window.location.href = "nota.html";
 
   } catch (err) {
@@ -228,7 +262,7 @@ async function finalizarVenda() {
 }
 
 // ===============================
-// NOTA FISCAL
+// NOTA
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
   const nota = localStorage.getItem("notaFiscal");
@@ -240,12 +274,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nfCpf").innerText = data.cliente.cpf;
   document.getElementById("nfTelefone").innerText = data.cliente.telefone;
 
-  document.getElementById("nfTotal").innerText =
-    data.total.toFixed(2);
-
-  document.getElementById("nfPagamento").innerText =
-    data.forma_pagamento;
-
+  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
+  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
   document.getElementById("nfData").innerText =
     new Date(data.data).toLocaleString("pt-BR");
 
@@ -270,5 +300,6 @@ document.addEventListener("DOMContentLoaded", () => {
     carregarProdutos();
     document.getElementById("filtroTexto").oninput = renderProdutos;
     document.getElementById("filtroTipo").onchange = renderProdutos;
+    document.getElementById("filtroModelo").onchange = renderProdutos;
   }
 });
