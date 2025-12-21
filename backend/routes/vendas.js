@@ -1,4 +1,4 @@
-=const express = require("express");
+const express = require("express");
 const db = require("../db");
 const auth = require("../middlewares/auth");
 
@@ -17,7 +17,7 @@ router.post("/", auth, async (req, res) => {
     chassi_moto
   } = req.body;
 
-  const { filial, perfil } = req.user;
+  const { filial } = req.user;
 
   try {
     const [result] = await db.promise().query(
@@ -57,7 +57,7 @@ router.post("/:id/itens", auth, async (req, res) => {
       [vendaId, produto_id, quantidade, valor_unitario]
     );
 
-    res.json({ message: "Item adicionado" });
+    res.json({ message: "Item adicionado à venda" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Erro ao adicionar item" });
@@ -65,11 +65,11 @@ router.post("/:id/itens", auth, async (req, res) => {
 });
 
 /* =========================
-   FINALIZAR VENDA + BAIXA DE ESTOQUE
+   FINALIZAR VENDA + BAIXAR ESTOQUE
 ========================= */
 router.post("/:id/finalizar", auth, async (req, res) => {
   const vendaId = req.params.id;
-  const { filial, perfil } = req.user;
+  const { filial } = req.user;
 
   try {
     // 1️⃣ Buscar itens da venda
@@ -80,7 +80,7 @@ router.post("/:id/finalizar", auth, async (req, res) => {
       [vendaId]
     );
 
-    // 2️⃣ Baixar estoque (somente da filial logada)
+    // 2️⃣ Baixar estoque da filial logada
     for (const item of itens) {
       await db.promise().query(
         `UPDATE produtos
@@ -90,7 +90,7 @@ router.post("/:id/finalizar", auth, async (req, res) => {
       );
     }
 
-    // 3️⃣ Marcar venda como FINALIZADA
+    // 3️⃣ Finalizar venda
     await db.promise().query(
       `UPDATE vendas
        SET status = 'FINALIZADA'
@@ -129,4 +129,3 @@ router.get("/", auth, async (req, res) => {
 });
 
 module.exports = router;
-
