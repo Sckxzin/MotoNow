@@ -1,11 +1,14 @@
+// ===============================
+// CONFIG
+// ===============================
 const API = "https://motonow-production.up.railway.app";
 
 let produtos = [];
 let carrinho = [];
 
-/* =========================
-   LOGIN
-========================= */
+// ===============================
+// LOGIN
+// ===============================
 async function login() {
   const login = document.getElementById("login").value;
   const senha = document.getElementById("senha").value;
@@ -27,7 +30,7 @@ async function login() {
 
     localStorage.setItem("token", data.token);
     window.location.href = "vendas.html";
-  } catch {
+  } catch (err) {
     document.getElementById("erro").innerText = "Erro de conexão";
   }
 }
@@ -37,31 +40,35 @@ function logout() {
   window.location.href = "index.html";
 }
 
-/* =========================
-   PRODUTOS
-========================= */
+// ===============================
+// PRODUTOS (FILTRADOS POR FILIAL NO BACKEND)
+// ===============================
 async function carregarProdutos() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
 
-  const res = await fetch(`${API}/produtos`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  try {
+    const res = await fetch(`${API}/produtos`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
-  produtos = await res.json();
-  renderProdutos();
+    if (res.status === 401) return logout();
+
+    produtos = await res.json();
+    renderProdutos();
+  } catch (err) {
+    alert("Erro ao carregar produtos");
+  }
 }
 
 function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
   if (!lista) return;
 
-  const texto = document
-    .getElementById("filtroTexto")
-    .value.toLowerCase();
-
+  const texto = document.getElementById("filtroTexto").value.toLowerCase();
   const tipo = document.getElementById("filtroTipo").value;
-  const filial = document.getElementById("filtroFilial").value;
 
   lista.innerHTML = "";
 
@@ -70,21 +77,18 @@ function renderProdutos() {
       (!texto ||
         p.nome.toLowerCase().includes(texto) ||
         p.codigo.toLowerCase().includes(texto)) &&
-      (!tipo || p.tipo === tipo) &&
-      (!filial || p.filial === filial)
+      (!tipo || p.tipo === tipo)
     )
     .forEach(p => {
       const li = document.createElement("li");
       li.innerHTML = `
-        <div>
-          <b>${p.nome}</b><br>
-          <small>
-            Código: ${p.codigo} • 
-            Modelo: ${p.modelo || "-"} • 
-            Filial: ${p.filial || "-"}
-          </small><br>
-          R$ ${Number(p.valor_sugerido).toFixed(2)}
-        </div>
+        <span>
+          ${p.codigo} - ${p.nome}
+          ${p.modelo ? `(${p.modelo})` : ""}
+          <br>
+          <b>R$ ${Number(p.valor_sugerido).toFixed(2)}</b>
+          <small> | Estoque: ${p.estoque}</small>
+        </span>
         <button onclick='addCarrinho(${JSON.stringify(p)})'>
           Adicionar
         </button>
@@ -93,14 +97,11 @@ function renderProdutos() {
     });
 }
 
-/* =========================
-   CARRINHO
-========================= */
+// ===============================
+// CARRINHO
+// ===============================
 function addCarrinho(produto) {
-  carrinho.push({
-    ...produto,
-    quantidade: 1
-  });
+  carrinho.push({ ...produto, quantidade: 1 });
   renderCarrinho();
 }
 
@@ -116,23 +117,18 @@ function renderCarrinho() {
   carrinho.forEach((p, i) => {
     const li = document.createElement("li");
     li.innerHTML = `
-      <span>${p.nome} - R$ ${Number(p.valor_sugerido).toFixed(2)}</span>
+      <span>
+        ${p.nome} - R$ ${Number(p.valor_sugerido).toFixed(2)}
+      </span>
       <button onclick="remover(${i})">X</button>
     `;
     lista.appendChild(li);
   });
-
-  // Mostrar dados da moto se houver revisão
-  const temRevisao = carrinho.some(i => i.tipo === "REVISAO");
-  const dadosMoto = document.getElementById("dadosMoto");
-  if (dadosMoto) {
-    dadosMoto.style.display = temRevisao ? "block" : "none";
-  }
 }
 
-/* =========================
-   FINALIZAR VENDA
-========================= */
+// ===============================
+// FINALIZAR VENDA
+// ===============================
 async function finalizarVenda() {
   if (carrinho.length === 0) {
     alert("Carrinho vazio");
@@ -154,25 +150,10 @@ async function finalizarVenda() {
     return;
   }
 
-  const temRevisao = carrinho.some(i => i.tipo === "REVISAO");
-
-  let modeloMoto = null;
-  let chassiMoto = null;
-
-  if (temRevisao) {
-    modeloMoto = document.getElementById("modeloMoto").value;
-    chassiMoto = document.getElementById("chassiMoto").value;
-
-    if (!modeloMoto || !chassiMoto) {
-      alert("Informe modelo e chassi da moto");
-      return;
-    }
-  }
-
   const token = localStorage.getItem("token");
 
   try {
-    /* 1️⃣ Criar venda */
+    // 1️⃣ Criar venda
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
@@ -183,16 +164,14 @@ async function finalizarVenda() {
         cliente_nome: nome,
         cliente_cpf: cpf,
         cliente_telefone: telefone,
-        forma_pagamento: formaPagamento,
-        modelo_moto: modeloMoto,
-        chassi_moto: chassiMoto
+        forma_pagamento: formaPagamento
       })
     });
 
     const vendaData = await vendaRes.json();
     const vendaId = vendaData.venda_id;
 
-    /* 2️⃣ Itens */
+    // 2️⃣ Itens da venda
     for (const item of carrinho) {
       await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
@@ -208,46 +187,49 @@ async function finalizarVenda() {
       });
     }
 
-    /* 3️⃣ Finalizar venda */
+    // 3️⃣ Finalizar venda
     await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` }
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
 
-    /* 4️⃣ Salvar nota */
-    localStorage.setItem(
-      "notaFiscal",
-      JSON.stringify({
-        cliente: { nome, cpf, telefone },
-        itens: carrinho.map(i => ({
-          codigo: i.codigo,
-          nome: i.nome,
-          quantidade: 1,
-          valor: i.valor_sugerido
-        })),
-        total: carrinho.reduce(
-          (s, i) => s + Number(i.valor_sugerido),
-          0
-        ),
-        forma_pagamento: formaPagamento,
-        data: new Date()
-      })
-    );
+    // 4️⃣ Salvar NOTA
+    localStorage.setItem("notaFiscal", JSON.stringify({
+      cliente: {
+        nome,
+        cpf,
+        telefone
+      },
+      itens: carrinho.map(i => ({
+        codigo: i.codigo,
+        nome: i.nome,
+        quantidade: 1,
+        valor: i.valor_sugerido
+      })),
+      total: carrinho.reduce(
+        (s, i) => s + Number(i.valor_sugerido), 0
+      ),
+      forma_pagamento: formaPagamento,
+      data: new Date()
+    }));
 
     carrinho = [];
     renderCarrinho();
 
-    /* 5️⃣ Abrir nota */
+    // 5️⃣ Abre nota automaticamente
     window.location.href = "nota.html";
+
   } catch (err) {
     console.error(err);
     alert("Erro ao finalizar venda");
   }
 }
 
-/* =========================
-   NOTA FISCAL
-========================= */
+// ===============================
+// NOTA FISCAL
+// ===============================
 document.addEventListener("DOMContentLoaded", () => {
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
@@ -258,8 +240,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nfCpf").innerText = data.cliente.cpf;
   document.getElementById("nfTelefone").innerText = data.cliente.telefone;
 
-  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
-  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
+  document.getElementById("nfTotal").innerText =
+    data.total.toFixed(2);
+
+  document.getElementById("nfPagamento").innerText =
+    data.forma_pagamento;
+
   document.getElementById("nfData").innerText =
     new Date(data.data).toLocaleString("pt-BR");
 
@@ -276,14 +262,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-/* =========================
-   AUTO LOAD
-========================= */
+// ===============================
+// AUTO LOAD
+// ===============================
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("listaProdutos")) {
     carregarProdutos();
     document.getElementById("filtroTexto").oninput = renderProdutos;
     document.getElementById("filtroTipo").onchange = renderProdutos;
-    document.getElementById("filtroFilial").onchange = renderProdutos;
   }
 });
