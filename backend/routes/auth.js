@@ -21,7 +21,7 @@ router.post("/login", (req, res) => {
         {
           id: user.id,
           perfil: user.perfil,
-          filial_id: user.filial_id
+          filial: user.filial   // 👈 AQUI
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
