@@ -8,75 +8,79 @@
 <body>
 
   <!-- TOPO -->
-  <header class="topbar">
+  <div class="topbar">
     <h1>MotoNow - Vendas</h1>
     <button onclick="logout()">Sair</button>
-  </header>
+  </div>
 
-  <!-- CONTEÚDO -->
-  <main class="container">
+  <div class="container">
 
     <!-- PRODUTOS -->
-    <section class="produtos">
+    <div class="produtos">
       <h2>Produtos</h2>
 
       <!-- FILTROS -->
       <div class="filtros">
-        <input 
-          id="filtroTexto" 
-          placeholder="Código ou nome do produto"
+        <input
+          id="filtroTexto"
+          placeholder="Código ou nome da peça"
         >
 
         <select id="filtroTipo">
-          <option value="">Todos</option>
+          <option value="">Todos os Tipos</option>
           <option value="PECA">Peças</option>
           <option value="OLEO">Óleo</option>
           <option value="CAPACETE">Capacete</option>
           <option value="REVISAO">Revisão</option>
-          
+        </select>
+
+        <select id="filtroModelo">
+          <option value="">Todos os Modelos</option>
+          <option value="JET">JET</option>
+          <option value="JEF">JEF</option>
+          <option value="SHI">SHI</option>
         </select>
       </div>
 
-      <!-- LISTA DE PRODUTOS -->
-      <ul id="listaProdutos">
-        <!-- preenchido via JS -->
-      </ul>
-    </section>
+      <ul id="listaProdutos"></ul>
+    </div>
 
     <!-- CARRINHO -->
-    <section class="carrinho">
+    <div class="carrinho">
       <h2>Carrinho</h2>
 
-      <ul id="listaCarrinho">
-        <!-- preenchido via JS -->
-      </ul>
+      <ul id="listaCarrinho"></ul>
+
       <!-- DADOS DO CLIENTE -->
-<div class="dados-cliente">
-  <input id="clienteNome" placeholder="Nome do cliente">
-  <input id="clienteCpf" placeholder="CPF">
-  <input id="clienteTelefone" placeholder="Telefone">
-</div>
+      <h3>Dados do Cliente</h3>
 
-<!-- DADOS DA MOTO (SÓ REVISÃO) -->
-<div class="dados-moto" id="dadosMoto" style="display:none;">
-  <input id="modeloMoto" placeholder="Modelo da moto">
-  <input id="chassiMoto" placeholder="Chassi">
-</div>
-
-
-      <!-- FORMA DE PAGAMENTO (LIVRE) -->
       <input
-        id="formaPagamento"
-        placeholder="Forma de pagamento (Pix, Dinheiro, Cartão, etc)"
+        id="clienteNome"
+        placeholder="Nome do cliente"
       >
 
-      <!-- FINALIZAR -->
+      <input
+        id="clienteCpf"
+        placeholder="CPF"
+      >
+
+      <input
+        id="clienteTelefone"
+        placeholder="Telefone"
+      >
+
+      <!-- PAGAMENTO -->
+      <input
+        id="formaPagamento"
+        placeholder="Forma de pagamento (Pix, Dinheiro, Cartão...)"
+      >
+
       <button onclick="finalizarVenda()">
         Finalizar Venda
       </button>
-    </section>
+    </div>
 
-  </main>
+  </div>
 
   <script src="app.js"></script>
 </body>
