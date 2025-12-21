@@ -1,79 +1,132 @@
-const express = require("express");
+=const express = require("express");
 const db = require("../db");
 const auth = require("../middlewares/auth");
 
 const router = express.Router();
 
-// criar venda
-router.post("/", auth, (req, res) => {
-  const { cliente_id } = req.body;
-  const { filial_id, id: usuario_id } = req.user;
+/* =========================
+   CRIAR VENDA
+========================= */
+router.post("/", auth, async (req, res) => {
+  const {
+    cliente_nome,
+    cliente_cpf,
+    cliente_telefone,
+    forma_pagamento,
+    modelo_moto,
+    chassi_moto
+  } = req.body;
 
-  db.query(
-    "INSERT INTO vendas (filial_id, cliente_id, usuario_id) VALUES (?,?,?)",
-    [filial_id, cliente_id || null, usuario_id],
-    (err, result) => {
-      if (err) return res.status(500).json(err);
-      res.json({ venda_id: result.insertId });
-    }
-  );
+  const { filial, perfil } = req.user;
+
+  try {
+    const [result] = await db.promise().query(
+      `INSERT INTO vendas 
+      (cliente_nome, cliente_cpf, cliente_telefone, forma_pagamento, modelo_moto, chassi_moto, filial, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'ABERTA')`,
+      [
+        cliente_nome,
+        cliente_cpf,
+        cliente_telefone,
+        forma_pagamento,
+        modelo_moto,
+        chassi_moto,
+        filial
+      ]
+    );
+
+    res.json({ venda_id: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao criar venda" });
+  }
 });
 
-// adicionar item ao carrinho
-router.post("/:id/itens", auth, (req, res) => {
-  const venda_id = req.params.id;
-  const { produto_id, quantidade, valor_unitario, brinde } = req.body;
+/* =========================
+   ADICIONAR ITENS À VENDA
+========================= */
+router.post("/:id/itens", auth, async (req, res) => {
+  const vendaId = req.params.id;
+  const { produto_id, quantidade, valor_unitario } = req.body;
 
-  db.query(
-    "SELECT tipo, valor_sugerido FROM produtos WHERE id = ?",
-    [produto_id],
-    (err, rows) => {
-      if (err) return res.status(500).json(err);
-      if (rows.length === 0)
-        return res.status(404).json({ message: "Produto não encontrado" });
+  try {
+    await db.promise().query(
+      `INSERT INTO vendas_itens 
+      (venda_id, produto_id, quantidade, valor_unitario)
+      VALUES (?, ?, ?, ?)`,
+      [vendaId, produto_id, quantidade, valor_unitario]
+    );
 
-      const produto = rows[0];
-      let valorFinal = valor_unitario;
+    res.json({ message: "Item adicionado" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao adicionar item" });
+  }
+});
 
-      if (produto.tipo === "OLEO") valorFinal = produto.valor_sugerido;
-      if (produto.tipo === "CAPACETE" && brinde) valorFinal = 0;
+/* =========================
+   FINALIZAR VENDA + BAIXA DE ESTOQUE
+========================= */
+router.post("/:id/finalizar", auth, async (req, res) => {
+  const vendaId = req.params.id;
+  const { filial, perfil } = req.user;
 
-      db.query(
-        `INSERT INTO venda_itens
-         (venda_id, produto_id, quantidade, valor_unitario, brinde)
-         VALUES (?,?,?,?,?)`,
-        [venda_id, produto_id, quantidade, valorFinal, brinde || false],
-        err2 => {
-          if (err2) return res.status(500).json(err2);
-          res.json({ message: "Item adicionado" });
-        }
+  try {
+    // 1️⃣ Buscar itens da venda
+    const [itens] = await db.promise().query(
+      `SELECT produto_id, quantidade 
+       FROM vendas_itens 
+       WHERE venda_id = ?`,
+      [vendaId]
+    );
+
+    // 2️⃣ Baixar estoque (somente da filial logada)
+    for (const item of itens) {
+      await db.promise().query(
+        `UPDATE produtos
+         SET estoque = estoque - ?
+         WHERE id = ? AND filial = ?`,
+        [item.quantidade, item.produto_id, filial]
       );
     }
-  );
+
+    // 3️⃣ Marcar venda como FINALIZADA
+    await db.promise().query(
+      `UPDATE vendas
+       SET status = 'FINALIZADA'
+       WHERE id = ?`,
+      [vendaId]
+    );
+
+    res.json({ message: "Venda finalizada e estoque atualizado" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao finalizar venda" });
+  }
 });
 
-// finalizar venda
-router.post("/:id/finalizar", auth, (req, res) => {
-  const venda_id = req.params.id;
+/* =========================
+   LISTAR VENDAS (POR FILIAL)
+========================= */
+router.get("/", auth, async (req, res) => {
+  const { filial, perfil } = req.user;
 
-  db.query(
-    `SELECT produto_id, quantidade
-     FROM venda_itens
-     WHERE venda_id = ?`,
-    [venda_id],
-    (err, itens) => {
-      if (err) return res.status(500).json(err);
+  try {
+    let sql = "SELECT * FROM vendas";
+    let params = [];
 
-      itens.forEach(i => {
-        db.query(
-          "UPDATE produtos SET estoque = estoque - ? WHERE id = ?",
-          [i.quantidade, i.produto_id]
-        );
-      });
-
-      res.json({ message: "Venda finalizada" });
+    if (perfil !== "DIRETORIA") {
+      sql += " WHERE filial = ?";
+      params.push(filial);
     }
-  );
+
+    const [rows] = await db.promise().query(sql, params);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao listar vendas" });
+  }
 });
 
 module.exports = router;
+
