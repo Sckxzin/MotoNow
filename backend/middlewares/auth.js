@@ -19,16 +19,14 @@ module.exports = (req, res, next) => {
     return res.status(401).json({ message: "Token mal formatado" });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ message: "Token inválido ou expirado" });
-    }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 🔑 Dados disponíveis para todas as rotas protegidas
-    req.userId = decoded.id;
-    req.userPerfil = decoded.perfil;
-    req.userFilial = decoded.filial;
+    // 🔴 PADRÃO ÚNICO USADO EM TODO O SISTEMA
+    req.user = decoded;
 
-    return next();
-  });
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Token inválido ou expirado" });
+  }
 };
