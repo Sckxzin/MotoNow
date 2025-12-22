@@ -8,7 +8,16 @@ const vendasRoutes = require("./routes/vendas");
 const revisoesRoutes = require("./routes/revisoes");
 
 const app = express();
-app.use(cors());
+
+/* ===============================
+   CORS CORRETO PARA RAILWAY
+================================ */
+app.use(cors({
+  origin: "*", // libera frontend Railway
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
 
 app.use("/auth", authRoutes);
@@ -16,6 +25,10 @@ app.use("/produtos", produtosRoutes);
 app.use("/vendas", vendasRoutes);
 app.use("/revisoes", revisoesRoutes);
 
-app.listen(process.env.PORT, () => {
-  console.log("🚀 Backend rodando");
+/* ===============================
+   PORTA (IMPORTANTE)
+================================ */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🚀 Backend rodando na porta", PORT);
 });
