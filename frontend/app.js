@@ -1,7 +1,7 @@
 // ===============================
 // CONFIG
 // ===============================
-const API = "https://easygoing-nature-production-ef75.up.railway.app";
+const API = "https://motonow-production.up.railway.app";
 
 let produtos = [];
 let carrinho = [];
@@ -107,7 +107,6 @@ function renderProdutos() {
 function addCarrinho(produto) {
   carrinho.push({
     ...produto,
-    quantidade: 1,
     valor_editado: Number(produto.valor_sugerido)
   });
   renderCarrinho();
@@ -185,8 +184,13 @@ async function finalizarVenda() {
   const telefone = document.getElementById("clienteTelefone").value;
   const formaPagamento = document.getElementById("formaPagamento").value;
 
-  if (!nome || !cpf || !telefone || !formaPagamento) {
-    alert("Preencha todos os dados");
+  if (!nome || !cpf || !telefone) {
+    alert("Preencha os dados do cliente");
+    return;
+  }
+
+  if (!formaPagamento) {
+    alert("Informe a forma de pagamento");
     return;
   }
 
@@ -208,9 +212,10 @@ async function finalizarVenda() {
     });
 
     const vendaData = await vendaRes.json();
+    const vendaId = vendaData.venda_id;
 
     for (const item of carrinho) {
-      await fetch(`${API}/vendas/${vendaData.venda_id}/itens`, {
+      await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -224,7 +229,7 @@ async function finalizarVenda() {
       });
     }
 
-    await fetch(`${API}/vendas/${vendaData.venda_id}/finalizar`, {
+    await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`
@@ -257,17 +262,18 @@ async function finalizarVenda() {
 }
 
 // ===============================
-// NOTA (PROTEGIDO)
+// NOTA (SÓ RODA SE EXISTIR)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
-  if (!document.getElementById("nfCliente")) return;
+  const nfCliente = document.getElementById("nfCliente");
+  if (!nfCliente) return;
 
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
 
   const data = JSON.parse(nota);
 
-  document.getElementById("nfCliente").innerText = data.cliente.nome;
+  nfCliente.innerText = data.cliente.nome;
   document.getElementById("nfCpf").innerText = data.cliente.cpf;
   document.getElementById("nfTelefone").innerText = data.cliente.telefone;
   document.getElementById("nfTotal").innerText = data.total.toFixed(2);
@@ -289,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ===============================
-// AUTO LOAD
+// AUTO LOAD (VENDAS)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("listaProdutos")) {
