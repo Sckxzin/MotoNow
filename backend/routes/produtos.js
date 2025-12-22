@@ -6,30 +6,22 @@ const router = express.Router();
 
 /* =====================================================
    LISTAR PRODUTOS
-   - FILIAL → vê apenas produtos da própria filial
-   - DIRETORIA → vê todos
+   - FILIAL → vê apenas os produtos da sua filial
+   - DIRETORIA → vê todos os produtos
 ===================================================== */
 router.get("/", auth, (req, res) => {
-  let sql = `
-    SELECT *
-    FROM produtos
-    WHERE estoque > 0
-  `;
+  let sql = "SELECT * FROM produtos";
   const params = [];
 
-  // Se NÃO for diretoria, filtra pela filial do usuário
   if (req.userPerfil !== "DIRETORIA") {
-    sql += " AND UPPER(filial) = UPPER(?)";
+    sql += " WHERE filial = ?";
     params.push(req.userFilial);
   }
 
   sql += " ORDER BY nome";
 
   db.query(sql, params, (err, rows) => {
-    if (err) {
-      console.error("Erro ao listar produtos:", err);
-      return res.status(500).json({ message: "Erro ao listar produtos" });
-    }
+    if (err) return res.status(500).json(err);
     res.json(rows);
   });
 });
@@ -55,18 +47,16 @@ router.post("/", auth, (req, res) => {
     filial
   } = req.body;
 
-  if (!codigo || !nome || !tipo || valor_sugerido == null || !modelo || !filial) {
+  if (!codigo || !nome || !tipo || !valor_sugerido || !modelo || !filial) {
     return res.status(400).json({
       message: "Dados do produto incompletos"
     });
   }
 
   db.query(
-    `
-    INSERT INTO produtos
-    (codigo, nome, tipo, valor_sugerido, estoque, modelo, filial)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
+    `INSERT INTO produtos
+     (codigo, nome, tipo, valor_sugerido, estoque, modelo, filial)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       codigo,
       nome,
@@ -74,13 +64,10 @@ router.post("/", auth, (req, res) => {
       valor_sugerido,
       estoque || 0,
       modelo,
-      filial.toUpperCase()
+      filial
     ],
     err => {
-      if (err) {
-        console.error("Erro ao cadastrar produto:", err);
-        return res.status(500).json({ message: "Erro ao cadastrar produto" });
-      }
+      if (err) return res.status(500).json(err);
       res.json({ message: "Produto cadastrado com sucesso" });
     }
   );
@@ -108,18 +95,9 @@ router.put("/:id", auth, (req, res) => {
   } = req.body;
 
   db.query(
-    `
-    UPDATE produtos
-    SET
-      codigo = ?,
-      nome = ?,
-      tipo = ?,
-      valor_sugerido = ?,
-      estoque = ?,
-      modelo = ?,
-      filial = ?
-    WHERE id = ?
-    `,
+    `UPDATE produtos
+     SET codigo = ?, nome = ?, tipo = ?, valor_sugerido = ?, estoque = ?, modelo = ?, filial = ?
+     WHERE id = ?`,
     [
       codigo,
       nome,
@@ -127,14 +105,11 @@ router.put("/:id", auth, (req, res) => {
       valor_sugerido,
       estoque,
       modelo,
-      filial.toUpperCase(),
+      filial,
       req.params.id
     ],
     err => {
-      if (err) {
-        console.error("Erro ao atualizar produto:", err);
-        return res.status(500).json({ message: "Erro ao atualizar produto" });
-      }
+      if (err) return res.status(500).json(err);
       res.json({ message: "Produto atualizado com sucesso" });
     }
   );
@@ -155,10 +130,7 @@ router.delete("/:id", auth, (req, res) => {
     "DELETE FROM produtos WHERE id = ?",
     [req.params.id],
     err => {
-      if (err) {
-        console.error("Erro ao remover produto:", err);
-        return res.status(500).json({ message: "Erro ao remover produto" });
-      }
+      if (err) return res.status(500).json(err);
       res.json({ message: "Produto removido com sucesso" });
     }
   );
