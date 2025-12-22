@@ -6,6 +6,8 @@ const authRoutes = require("./routes/auth");
 const produtosRoutes = require("./routes/produtos");
 const vendasRoutes = require("./routes/vendas");
 const revisoesRoutes = require("./routes/revisoes");
+const motosRoutes = require("./routes/motos");
+
 
 const app = express();
 
@@ -24,6 +26,7 @@ app.use("/auth", authRoutes);
 app.use("/produtos", produtosRoutes);
 app.use("/vendas", vendasRoutes);
 app.use("/revisoes", revisoesRoutes);
+app.use("/motos", motosRoutes);
 
 /* ===============================
    PORTA (IMPORTANTE)
