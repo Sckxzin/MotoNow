@@ -54,11 +54,15 @@ async function carregarProdutos() {
       }
     });
 
-    if (res.status === 401) return logout();
+    if (!res.ok) {
+      alert("Erro ao carregar produtos");
+      return;
+    }
 
     produtos = await res.json();
     renderProdutos();
-  } catch {
+  } catch (err) {
+    console.error(err);
     alert("Erro ao carregar produtos");
   }
 }
@@ -121,6 +125,8 @@ function alterarValor(index, novoValor) {
 
 function renderCarrinho() {
   const lista = document.getElementById("listaCarrinho");
+  if (!lista) return;
+
   lista.innerHTML = "";
 
   carrinho.forEach((p, i) => {
@@ -179,20 +185,14 @@ async function finalizarVenda() {
   const telefone = document.getElementById("clienteTelefone").value;
   const formaPagamento = document.getElementById("formaPagamento").value;
 
-  if (!nome || !cpf || !telefone) {
-    alert("Preencha os dados do cliente");
-    return;
-  }
-
-  if (!formaPagamento) {
-    alert("Informe a forma de pagamento");
+  if (!nome || !cpf || !telefone || !formaPagamento) {
+    alert("Preencha todos os dados");
     return;
   }
 
   const token = localStorage.getItem("token");
 
   try {
-    // 1️⃣ Criar venda
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
@@ -208,11 +208,9 @@ async function finalizarVenda() {
     });
 
     const vendaData = await vendaRes.json();
-    const vendaId = vendaData.venda_id;
 
-    // 2️⃣ Itens
     for (const item of carrinho) {
-      await fetch(`${API}/vendas/${vendaId}/itens`, {
+      await fetch(`${API}/vendas/${vendaData.venda_id}/itens`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -226,15 +224,13 @@ async function finalizarVenda() {
       });
     }
 
-    // 3️⃣ Finalizar venda
-    await fetch(`${API}/vendas/${vendaId}/finalizar`, {
+    await fetch(`${API}/vendas/${vendaData.venda_id}/finalizar`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`
       }
     });
 
-    // 4️⃣ Nota
     localStorage.setItem("notaFiscal", JSON.stringify({
       cliente: { nome, cpf, telefone },
       itens: carrinho.map(i => ({
@@ -252,7 +248,6 @@ async function finalizarVenda() {
 
     carrinho = [];
     renderCarrinho();
-
     window.location.href = "nota.html";
 
   } catch (err) {
@@ -262,9 +257,11 @@ async function finalizarVenda() {
 }
 
 // ===============================
-// NOTA
+// NOTA (PROTEGIDO)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
+  if (!document.getElementById("nfCliente")) return;
+
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
 
@@ -273,7 +270,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nfCliente").innerText = data.cliente.nome;
   document.getElementById("nfCpf").innerText = data.cliente.cpf;
   document.getElementById("nfTelefone").innerText = data.cliente.telefone;
-
   document.getElementById("nfTotal").innerText = data.total.toFixed(2);
   document.getElementById("nfPagamento").innerText = data.forma_pagamento;
   document.getElementById("nfData").innerText =
