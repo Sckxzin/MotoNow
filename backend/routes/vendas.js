@@ -56,7 +56,7 @@ router.post("/:id/itens", auth, (req, res) => {
   }
 
   db.query(
-    `INSERT INTO vendas_itens
+    `INSERT INTO venda_itens
      (venda_id, produto_id, quantidade, valor_unitario)
      VALUES (?, ?, ?, ?)`,
     [venda_id, produto_id, quantidade, valor_unitario],
@@ -79,7 +79,7 @@ router.post("/:id/finalizar", auth, (req, res) => {
   // 1️⃣ Buscar itens
   db.query(
     `SELECT produto_id, quantidade, valor_unitario
-     FROM vendas_itens
+     FROM venda_itens
      WHERE venda_id = ?`,
     [venda_id],
     (err, itens) => {
