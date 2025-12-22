@@ -30,7 +30,8 @@ async function login() {
 
     localStorage.setItem("token", data.token);
     window.location.href = "vendas.html";
-  } catch {
+  } catch (err) {
+    console.error(err);
     document.getElementById("erro").innerText = "Erro de conexão";
   }
 }
@@ -49,11 +50,12 @@ async function carregarProdutos() {
 
   try {
     const res = await fetch(`${API}/produtos`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
 
     if (!res.ok) {
-      console.error("Erro ao buscar produtos", res.status);
       alert("Erro ao carregar produtos");
       return;
     }
@@ -71,9 +73,9 @@ function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
   if (!lista) return;
 
-  const texto = document.getElementById("filtroTexto")?.value?.toLowerCase() || "";
-  const tipo = document.getElementById("filtroTipo")?.value || "";
-  const modelo = document.getElementById("filtroModelo")?.value || "";
+  const texto = document.getElementById("filtroTexto").value.toLowerCase();
+  const tipo = document.getElementById("filtroTipo").value;
+  const modelo = document.getElementById("filtroModelo").value;
 
   lista.innerHTML = "";
 
@@ -90,7 +92,7 @@ function renderProdutos() {
       li.innerHTML = `
         <span>
           <b>${p.codigo}</b> - ${p.nome}<br>
-          Modelo: ${p.modelo || "-"} | Estoque: ${p.estoque}<br>
+          Modelo: ${p.modelo} | Estoque: ${p.estoque}<br>
           <b>R$ ${Number(p.valor_sugerido).toFixed(2)}</b>
         </span>
         <button onclick='addCarrinho(${JSON.stringify(p)})'>
@@ -107,6 +109,7 @@ function renderProdutos() {
 function addCarrinho(produto) {
   carrinho.push({
     ...produto,
+    quantidade: 1,
     valor_editado: Number(produto.valor_sugerido)
   });
   renderCarrinho();
@@ -154,7 +157,9 @@ function renderCarrinho() {
 }
 
 function atualizarTotal() {
-  const total = carrinho.reduce((s, i) => s + Number(i.valor_editado), 0);
+  const total = carrinho.reduce(
+    (s, i) => s + Number(i.valor_editado), 0
+  );
 
   let totalDiv = document.getElementById("totalCarrinho");
   if (!totalDiv) {
@@ -162,7 +167,7 @@ function atualizarTotal() {
     totalDiv.id = "totalCarrinho";
     totalDiv.style.marginTop = "10px";
     totalDiv.style.fontWeight = "bold";
-    document.querySelector(".carrinho")?.appendChild(totalDiv);
+    document.querySelector(".carrinho").appendChild(totalDiv);
   }
 
   totalDiv.innerText = `Total: R$ ${total.toFixed(2)}`;
@@ -177,18 +182,13 @@ async function finalizarVenda() {
     return;
   }
 
-  const nome = document.getElementById("clienteNome")?.value;
-  const cpf = document.getElementById("clienteCpf")?.value;
-  const telefone = document.getElementById("clienteTelefone")?.value;
-  const formaPagamento = document.getElementById("formaPagamento")?.value;
+  const nome = document.getElementById("clienteNome").value;
+  const cpf = document.getElementById("clienteCpf").value;
+  const telefone = document.getElementById("clienteTelefone").value;
+  const formaPagamento = document.getElementById("formaPagamento").value;
 
-  if (!nome || !cpf || !telefone) {
-    alert("Preencha os dados do cliente");
-    return;
-  }
-
-  if (!formaPagamento) {
-    alert("Informe a forma de pagamento");
+  if (!nome || !cpf || !telefone || !formaPagamento) {
+    alert("Preencha todos os dados");
     return;
   }
 
@@ -229,7 +229,9 @@ async function finalizarVenda() {
 
     await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` }
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
 
     localStorage.setItem("notaFiscal", JSON.stringify({
@@ -256,7 +258,7 @@ async function finalizarVenda() {
 }
 
 // ===============================
-// NOTA (ISOLADA – NÃO QUEBRA VENDAS)
+// NOTA (SÓ SE EXISTIR NA PÁGINA)
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
   if (!document.getElementById("nfCliente")) return;
