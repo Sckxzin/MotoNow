@@ -4,34 +4,8 @@ let produtos = [];
 let carrinho = [];
 
 /* =========================
-   LOGIN
+   AUTH
 ========================= */
-async function login() {
-  const login = document.getElementById("login").value;
-  const senha = document.getElementById("senha").value;
-
-  try {
-    const res = await fetch(`${API}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login, senha })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      document.getElementById("erro").innerText =
-        data.message || "Erro no login";
-      return;
-    }
-
-    localStorage.setItem("token", data.token);
-    window.location.href = "vendas.html";
-  } catch {
-    document.getElementById("erro").innerText = "Erro de conexão";
-  }
-}
-
 function logout() {
   localStorage.removeItem("token");
   window.location.href = "index.html";
@@ -44,50 +18,62 @@ async function carregarProdutos() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
 
-  const res = await fetch(`${API}/produtos`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  try {
+    const res = await fetch(`${API}/produtos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-  produtos = await res.json();
-  renderProdutos();
+    if (!res.ok) throw new Error("Erro ao buscar produtos");
+
+    produtos = await res.json();
+    preencherFiltroModelo();
+    renderProdutos();
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao carregar produtos");
+  }
+}
+
+function preencherFiltroModelo() {
+  const select = document.getElementById("filtroModelo");
+  if (!select) return;
+
+  const modelos = [...new Set(produtos.map(p => p.modelo).filter(Boolean))];
+
+  select.innerHTML = `<option value="">Todos os Modelos</option>`;
+  modelos.forEach(m => {
+    select.innerHTML += `<option value="${m}">${m}</option>`;
+  });
 }
 
 function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
   if (!lista) return;
 
-  const texto = document
-    .getElementById("filtroTexto")
-    .value.toLowerCase();
-
+  const texto = document.getElementById("filtroTexto").value.toLowerCase();
   const tipo = document.getElementById("filtroTipo").value;
   const modelo = document.getElementById("filtroModelo").value;
 
   lista.innerHTML = "";
 
   produtos
-    .filter(p => {
-      return (
-        (!texto ||
-          p.nome.toLowerCase().includes(texto) ||
-          p.codigo.toLowerCase().includes(texto)) &&
-        (!tipo || p.tipo === tipo) &&
-        (!modelo || p.modelo === modelo)
-      );
-    })
+    .filter(p =>
+      (!texto || p.nome.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto)) &&
+      (!tipo || p.tipo === tipo) &&
+      (!modelo || p.modelo === modelo) &&
+      p.estoque > 0
+    )
     .forEach(p => {
       const li = document.createElement("li");
       li.innerHTML = `
-        <div>
+        <span>
           <b>${p.nome}</b><br>
-          <small>Código: ${p.codigo}</small><br>
-          <small>Modelo: ${p.modelo}</small><br>
-          <small>Estoque: ${p.estoque}</small><br>
+          Código: ${p.codigo}<br>
+          Modelo: ${p.modelo}<br>
+          Estoque: ${p.estoque}<br>
           <b>R$ ${Number(p.valor_sugerido).toFixed(2)}</b>
-        </div>
-        <button onclick='addCarrinho(${JSON.stringify(p)})'>
-          Adicionar
-        </button>
+        </span>
+        <button onclick='addCarrinho(${JSON.stringify(p)})'>Adicionar</button>
       `;
       lista.appendChild(li);
     });
@@ -99,7 +85,8 @@ function renderProdutos() {
 function addCarrinho(produto) {
   carrinho.push({
     ...produto,
-    valor: Number(produto.valor_sugerido)
+    quantidade: 1,
+    valor_unitario: Number(produto.valor_sugerido)
   });
   renderCarrinho();
 }
@@ -110,25 +97,28 @@ function renderCarrinho() {
 
   lista.innerHTML = "";
 
-  carrinho.forEach((p, i) => {
+  carrinho.forEach((item, index) => {
     const li = document.createElement("li");
     li.innerHTML = `
-      <div>
-        <b>${p.nome}</b><br>
-        <input type="number"
-          value="${p.valor}"
-          step="0.01"
-          onchange="alterarValor(${i}, this.value)"
-        />
-      </div>
-      <button onclick="remover(${i})">X</button>
+      <span>
+        ${item.nome}<br>
+        <input type="number" min="1" value="${item.quantidade}"
+          onchange="alterarQtd(${index}, this.value)">
+        <input type="number" step="0.01" value="${item.valor_unitario}"
+          onchange="alterarValor(${index}, this.value)">
+      </span>
+      <button onclick="remover(${index})">X</button>
     `;
     lista.appendChild(li);
   });
 }
 
-function alterarValor(index, novoValor) {
-  carrinho[index].valor = Number(novoValor);
+function alterarQtd(index, qtd) {
+  carrinho[index].quantidade = Number(qtd);
+}
+
+function alterarValor(index, valor) {
+  carrinho[index].valor_unitario = Number(valor);
 }
 
 function remover(index) {
@@ -148,18 +138,17 @@ async function finalizarVenda() {
   const nome = document.getElementById("clienteNome").value;
   const cpf = document.getElementById("clienteCpf").value;
   const telefone = document.getElementById("clienteTelefone").value;
-  const formaPagamento =
-    document.getElementById("formaPagamento").value;
+  const formaPagamento = document.getElementById("formaPagamento").value;
 
   if (!nome || !cpf || !telefone || !formaPagamento) {
-    alert("Preencha os dados do cliente");
+    alert("Preencha todos os dados do cliente");
     return;
   }
 
   const token = localStorage.getItem("token");
 
   try {
-    // Criar venda
+    // 1️⃣ Criar venda
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
@@ -174,12 +163,11 @@ async function finalizarVenda() {
       })
     });
 
-    const vendaData = await vendaRes.json();
-    const vendaId = vendaData.venda_id;
+    const venda = await vendaRes.json();
 
-    // Itens da venda
+    // 2️⃣ Itens
     for (const item of carrinho) {
-      await fetch(`${API}/vendas/${vendaId}/itens`, {
+      await fetch(`${API}/vendas/${venda.id}/itens`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -187,38 +175,30 @@ async function finalizarVenda() {
         },
         body: JSON.stringify({
           produto_id: item.id,
-          quantidade: 1,
-          valor_unitario: item.valor
+          quantidade: item.quantidade,
+          valor_unitario: item.valor_unitario
         })
       });
     }
 
-    // Finalizar
-    await fetch(`${API}/vendas/${vendaId}/finalizar`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    // Salvar NOTA
-    localStorage.setItem(
-      "notaFiscal",
-      JSON.stringify({
-        cliente: { nome, cpf, telefone },
-        itens: carrinho.map(i => ({
-          codigo: i.codigo,
-          nome: i.nome,
-          quantidade: 1,
-          valor: i.valor
-        })),
-        total: carrinho.reduce((s, i) => s + i.valor, 0),
-        forma_pagamento: formaPagamento,
-        data: new Date()
-      })
-    );
+    // 3️⃣ Nota Fiscal
+    localStorage.setItem("notaFiscal", JSON.stringify({
+      cliente: { nome, cpf, telefone },
+      itens: carrinho.map(i => ({
+        codigo: i.codigo,
+        nome: i.nome,
+        quantidade: i.quantidade,
+        valor: i.valor_unitario
+      })),
+      total: carrinho.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0),
+      forma_pagamento: formaPagamento,
+      data: new Date()
+    }));
 
     carrinho = [];
     renderCarrinho();
     window.location.href = "nota.html";
+
   } catch (err) {
     console.error(err);
     alert("Erro ao finalizar venda");
@@ -226,22 +206,11 @@ async function finalizarVenda() {
 }
 
 /* =========================
-   AUTO LOAD - VENDAS
+   NOTA FISCAL (SÓ NA nota.html)
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
-  if (document.getElementById("listaProdutos")) {
-    carregarProdutos();
-    document.getElementById("filtroTexto").oninput = renderProdutos;
-    document.getElementById("filtroTipo").onchange = renderProdutos;
-    document.getElementById("filtroModelo").onchange = renderProdutos;
-  }
-});
-
-/* =========================
-   NOTA (PROTEGIDO)
-========================= */
-document.addEventListener("DOMContentLoaded", () => {
-  if (!document.getElementById("nfCliente")) return;
+  const nfCliente = document.getElementById("nfCliente");
+  if (!nfCliente) return;
 
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
@@ -251,14 +220,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nfCliente").innerText = data.cliente.nome;
   document.getElementById("nfCpf").innerText = data.cliente.cpf;
   document.getElementById("nfTelefone").innerText = data.cliente.telefone;
-  document.getElementById("nfTotal").innerText =
-    data.total.toFixed(2);
-  document.getElementById("nfPagamento").innerText =
-    data.forma_pagamento;
+  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
+  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
   document.getElementById("nfData").innerText =
     new Date(data.data).toLocaleString("pt-BR");
 
   const tbody = document.getElementById("nfItens");
+  tbody.innerHTML = "";
+
   data.itens.forEach(i => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -269,4 +238,16 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     tbody.appendChild(tr);
   });
+});
+
+/* =========================
+   AUTOLOAD
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.getElementById("listaProdutos")) {
+    carregarProdutos();
+    document.getElementById("filtroTexto").oninput = renderProdutos;
+    document.getElementById("filtroTipo").onchange = renderProdutos;
+    document.getElementById("filtroModelo").onchange = renderProdutos;
+  }
 });
