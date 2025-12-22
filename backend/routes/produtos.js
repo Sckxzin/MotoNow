@@ -13,15 +13,22 @@ router.get("/", auth, (req, res) => {
   let sql = "SELECT * FROM produtos";
   const params = [];
 
-  if (req.userPerfil !== "DIRETORIA") {
+  // ✅ CORREÇÃO CRÍTICA AQUI
+  if (req.user.perfil !== "DIRETORIA") {
     sql += " WHERE filial = ?";
-    params.push(req.userFilial);
+    params.push(req.user.filial);
   }
 
   sql += " ORDER BY nome";
 
   db.query(sql, params, (err, rows) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      console.error("Erro ao buscar produtos:", err);
+      return res.status(500).json({
+        message: "Erro ao buscar produtos"
+      });
+    }
+
     res.json(rows);
   });
 });
@@ -31,7 +38,7 @@ router.get("/", auth, (req, res) => {
    - SOMENTE DIRETORIA
 ===================================================== */
 router.post("/", auth, (req, res) => {
-  if (req.userPerfil !== "DIRETORIA") {
+  if (req.user.perfil !== "DIRETORIA") {
     return res.status(403).json({
       message: "Apenas a diretoria pode cadastrar produtos"
     });
@@ -67,7 +74,13 @@ router.post("/", auth, (req, res) => {
       filial
     ],
     err => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error("Erro ao cadastrar produto:", err);
+        return res.status(500).json({
+          message: "Erro ao cadastrar produto"
+        });
+      }
+
       res.json({ message: "Produto cadastrado com sucesso" });
     }
   );
@@ -78,7 +91,7 @@ router.post("/", auth, (req, res) => {
    - SOMENTE DIRETORIA
 ===================================================== */
 router.put("/:id", auth, (req, res) => {
-  if (req.userPerfil !== "DIRETORIA") {
+  if (req.user.perfil !== "DIRETORIA") {
     return res.status(403).json({
       message: "Apenas a diretoria pode editar produtos"
     });
@@ -109,7 +122,13 @@ router.put("/:id", auth, (req, res) => {
       req.params.id
     ],
     err => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error("Erro ao atualizar produto:", err);
+        return res.status(500).json({
+          message: "Erro ao atualizar produto"
+        });
+      }
+
       res.json({ message: "Produto atualizado com sucesso" });
     }
   );
@@ -120,7 +139,7 @@ router.put("/:id", auth, (req, res) => {
    - SOMENTE DIRETORIA
 ===================================================== */
 router.delete("/:id", auth, (req, res) => {
-  if (req.userPerfil !== "DIRETORIA") {
+  if (req.user.perfil !== "DIRETORIA") {
     return res.status(403).json({
       message: "Apenas a diretoria pode remover produtos"
     });
@@ -130,7 +149,13 @@ router.delete("/:id", auth, (req, res) => {
     "DELETE FROM produtos WHERE id = ?",
     [req.params.id],
     err => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error("Erro ao remover produto:", err);
+        return res.status(500).json({
+          message: "Erro ao remover produto"
+        });
+      }
+
       res.json({ message: "Produto removido com sucesso" });
     }
   );
