@@ -108,10 +108,13 @@ router.post("/:id/finalizar", auth, (req, res) => {
           itens.forEach(item => {
             db.query(
               `UPDATE produtos
-               SET estoque = estoque - ?
-               WHERE id = ?`,
-              [item.quantidade, item.produto_id]
-            );
+   SET estoque = IFNULL(estoque, 0) - ?
+   WHERE id = ?`,
+  [item.quantidade, item.produto_id],
+  err => {
+    if (err) console.error("Erro ao dar baixa no estoque:", err);
+  }
+);
           });
 
           res.json({
