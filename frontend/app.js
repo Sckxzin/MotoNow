@@ -1,19 +1,52 @@
 const API = "https://motonow-production.up.railway.app";
 
-let produtos = [];
-let carrinho = [];
+/* =====================================================
+   LOGIN
+===================================================== */
+async function login() {
+  const login = document.getElementById("login").value;
+  const senha = document.getElementById("senha").value;
+  const erro = document.getElementById("erro");
 
-/* =========================
-   AUTH
-========================= */
+  if (!login || !senha) {
+    erro.innerText = "Informe login e senha";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login, senha })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      erro.innerText = data.message || "Erro no login";
+      return;
+    }
+
+    localStorage.setItem("token", data.token);
+    window.location.href = "vendas.html";
+
+  } catch (err) {
+    console.error(err);
+    erro.innerText = "Erro de conexão";
+  }
+}
+
 function logout() {
   localStorage.removeItem("token");
   window.location.href = "index.html";
 }
 
-/* =========================
+/* =====================================================
    PRODUTOS
-========================= */
+===================================================== */
+let produtos = [];
+let carrinho = [];
+
 async function carregarProdutos() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -23,27 +56,13 @@ async function carregarProdutos() {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error("Erro ao buscar produtos");
-
     produtos = await res.json();
-    preencherFiltroModelo();
     renderProdutos();
+
   } catch (err) {
     console.error(err);
     alert("Erro ao carregar produtos");
   }
-}
-
-function preencherFiltroModelo() {
-  const select = document.getElementById("filtroModelo");
-  if (!select) return;
-
-  const modelos = [...new Set(produtos.map(p => p.modelo).filter(Boolean))];
-
-  select.innerHTML = `<option value="">Todos os Modelos</option>`;
-  modelos.forEach(m => {
-    select.innerHTML += `<option value="${m}">${m}</option>`;
-  });
 }
 
 function renderProdutos() {
@@ -60,8 +79,7 @@ function renderProdutos() {
     .filter(p =>
       (!texto || p.nome.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto)) &&
       (!tipo || p.tipo === tipo) &&
-      (!modelo || p.modelo === modelo) &&
-      p.estoque > 0
+      (!modelo || p.modelo === modelo)
     )
     .forEach(p => {
       const li = document.createElement("li");
@@ -69,9 +87,8 @@ function renderProdutos() {
         <span>
           <b>${p.nome}</b><br>
           Código: ${p.codigo}<br>
-          Modelo: ${p.modelo}<br>
-          Estoque: ${p.estoque}<br>
-          <b>R$ ${Number(p.valor_sugerido).toFixed(2)}</b>
+          Modelo: ${p.modelo} | Filial: ${p.filial}<br>
+          R$ ${Number(p.valor_sugerido).toFixed(2)}
         </span>
         <button onclick='addCarrinho(${JSON.stringify(p)})'>Adicionar</button>
       `;
@@ -79,35 +96,33 @@ function renderProdutos() {
     });
 }
 
-/* =========================
+/* =====================================================
    CARRINHO
-========================= */
+===================================================== */
 function addCarrinho(produto) {
   carrinho.push({
     ...produto,
     quantidade: 1,
-    valor_unitario: Number(produto.valor_sugerido)
+    valor: Number(produto.valor_sugerido)
   });
   renderCarrinho();
 }
 
 function renderCarrinho() {
   const lista = document.getElementById("listaCarrinho");
-  if (!lista) return;
-
   lista.innerHTML = "";
 
   carrinho.forEach((item, index) => {
     const li = document.createElement("li");
     li.innerHTML = `
       <span>
-        ${item.nome}<br>
-        <input type="number" min="1" value="${item.quantidade}"
-          onchange="alterarQtd(${index}, this.value)">
-        <input type="number" step="0.01" value="${item.valor_unitario}"
-          onchange="alterarValor(${index}, this.value)">
+        ${item.nome} (${item.codigo})<br>
+        Qtd: <input type="number" min="1" value="${item.quantidade}"
+             onchange="alterarQtd(${index}, this.value)">
+        Valor: R$ <input type="number" step="0.01" value="${item.valor}"
+             onchange="alterarValor(${index}, this.value)">
       </span>
-      <button onclick="remover(${index})">X</button>
+      <button onclick="removerItem(${index})">X</button>
     `;
     lista.appendChild(li);
   });
@@ -118,17 +133,17 @@ function alterarQtd(index, qtd) {
 }
 
 function alterarValor(index, valor) {
-  carrinho[index].valor_unitario = Number(valor);
+  carrinho[index].valor = Number(valor);
 }
 
-function remover(index) {
+function removerItem(index) {
   carrinho.splice(index, 1);
   renderCarrinho();
 }
 
-/* =========================
+/* =====================================================
    FINALIZAR VENDA
-========================= */
+===================================================== */
 async function finalizarVenda() {
   if (carrinho.length === 0) {
     alert("Carrinho vazio");
@@ -164,10 +179,11 @@ async function finalizarVenda() {
     });
 
     const venda = await vendaRes.json();
+    const vendaId = venda.venda_id;
 
     // 2️⃣ Itens
     for (const item of carrinho) {
-      await fetch(`${API}/vendas/${venda.id}/itens`, {
+      await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,27 +192,29 @@ async function finalizarVenda() {
         body: JSON.stringify({
           produto_id: item.id,
           quantidade: item.quantidade,
-          valor_unitario: item.valor_unitario
+          valor_unitario: item.valor
         })
       });
     }
 
-    // 3️⃣ Nota Fiscal
+    // 3️⃣ Finalizar
+    await fetch(`${API}/vendas/${vendaId}/finalizar`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // 4️⃣ Nota fiscal
     localStorage.setItem("notaFiscal", JSON.stringify({
       cliente: { nome, cpf, telefone },
-      itens: carrinho.map(i => ({
-        codigo: i.codigo,
-        nome: i.nome,
-        quantidade: i.quantidade,
-        valor: i.valor_unitario
-      })),
-      total: carrinho.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0),
+      itens: carrinho,
+      total: carrinho.reduce((s, i) => s + i.valor * i.quantidade, 0),
       forma_pagamento: formaPagamento,
       data: new Date()
     }));
 
     carrinho = [];
     renderCarrinho();
+
     window.location.href = "nota.html";
 
   } catch (err) {
@@ -205,44 +223,9 @@ async function finalizarVenda() {
   }
 }
 
-/* =========================
-   NOTA FISCAL (SÓ NA nota.html)
-========================= */
-document.addEventListener("DOMContentLoaded", () => {
-  const nfCliente = document.getElementById("nfCliente");
-  if (!nfCliente) return;
-
-  const nota = localStorage.getItem("notaFiscal");
-  if (!nota) return;
-
-  const data = JSON.parse(nota);
-
-  document.getElementById("nfCliente").innerText = data.cliente.nome;
-  document.getElementById("nfCpf").innerText = data.cliente.cpf;
-  document.getElementById("nfTelefone").innerText = data.cliente.telefone;
-  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
-  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
-  document.getElementById("nfData").innerText =
-    new Date(data.data).toLocaleString("pt-BR");
-
-  const tbody = document.getElementById("nfItens");
-  tbody.innerHTML = "";
-
-  data.itens.forEach(i => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${i.codigo}</td>
-      <td>${i.nome}</td>
-      <td>${i.quantidade}</td>
-      <td>R$ ${Number(i.valor).toFixed(2)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-});
-
-/* =========================
-   AUTOLOAD
-========================= */
+/* =====================================================
+   AUTO LOAD
+===================================================== */
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("listaProdutos")) {
     carregarProdutos();
