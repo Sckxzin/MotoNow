@@ -1,14 +1,11 @@
-// ===============================
-// CONFIG
-// ===============================
 const API = "https://motonow-production.up.railway.app";
 
 let produtos = [];
 let carrinho = [];
 
-// ===============================
-// LOGIN
-// ===============================
+/* =========================
+   LOGIN
+========================= */
 async function login() {
   const login = document.getElementById("login").value;
   const senha = document.getElementById("senha").value;
@@ -40,55 +37,54 @@ function logout() {
   window.location.href = "index.html";
 }
 
-// ===============================
-// PRODUTOS
-// ===============================
+/* =========================
+   PRODUTOS
+========================= */
 async function carregarProdutos() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
 
-  try {
-    const res = await fetch(`${API}/produtos`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+  const res = await fetch(`${API}/produtos`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 
-    if (res.status === 401) return logout();
-
-    produtos = await res.json();
-    renderProdutos();
-  } catch {
-    alert("Erro ao carregar produtos");
-  }
+  produtos = await res.json();
+  renderProdutos();
 }
 
 function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
   if (!lista) return;
 
-  const texto = document.getElementById("filtroTexto").value.toLowerCase();
+  const texto = document
+    .getElementById("filtroTexto")
+    .value.toLowerCase();
+
   const tipo = document.getElementById("filtroTipo").value;
   const modelo = document.getElementById("filtroModelo").value;
 
   lista.innerHTML = "";
 
   produtos
-    .filter(p =>
-      (!texto ||
-        p.nome.toLowerCase().includes(texto) ||
-        p.codigo.toLowerCase().includes(texto)) &&
-      (!tipo || p.tipo === tipo) &&
-      (!modelo || p.modelo === modelo)
-    )
+    .filter(p => {
+      return (
+        (!texto ||
+          p.nome.toLowerCase().includes(texto) ||
+          p.codigo.toLowerCase().includes(texto)) &&
+        (!tipo || p.tipo === tipo) &&
+        (!modelo || p.modelo === modelo)
+      );
+    })
     .forEach(p => {
       const li = document.createElement("li");
       li.innerHTML = `
-        <span>
-          <b>${p.codigo}</b> - ${p.nome}<br>
-          Modelo: ${p.modelo} | Estoque: ${p.estoque}<br>
+        <div>
+          <b>${p.nome}</b><br>
+          <small>Código: ${p.codigo}</small><br>
+          <small>Modelo: ${p.modelo}</small><br>
+          <small>Estoque: ${p.estoque}</small><br>
           <b>R$ ${Number(p.valor_sugerido).toFixed(2)}</b>
-        </span>
+        </div>
         <button onclick='addCarrinho(${JSON.stringify(p)})'>
           Adicionar
         </button>
@@ -97,16 +93,42 @@ function renderProdutos() {
     });
 }
 
-// ===============================
-// CARRINHO
-// ===============================
+/* =========================
+   CARRINHO
+========================= */
 function addCarrinho(produto) {
   carrinho.push({
     ...produto,
-    quantidade: 1,
-    valor_editado: Number(produto.valor_sugerido)
+    valor: Number(produto.valor_sugerido)
   });
   renderCarrinho();
+}
+
+function renderCarrinho() {
+  const lista = document.getElementById("listaCarrinho");
+  if (!lista) return;
+
+  lista.innerHTML = "";
+
+  carrinho.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div>
+        <b>${p.nome}</b><br>
+        <input type="number"
+          value="${p.valor}"
+          step="0.01"
+          onchange="alterarValor(${i}, this.value)"
+        />
+      </div>
+      <button onclick="remover(${i})">X</button>
+    `;
+    lista.appendChild(li);
+  });
+}
+
+function alterarValor(index, novoValor) {
+  carrinho[index].valor = Number(novoValor);
 }
 
 function remover(index) {
@@ -114,60 +136,9 @@ function remover(index) {
   renderCarrinho();
 }
 
-function alterarValor(index, novoValor) {
-  carrinho[index].valor_editado = Number(novoValor);
-  atualizarTotal();
-}
-
-function renderCarrinho() {
-  const lista = document.getElementById("listaCarrinho");
-  lista.innerHTML = "";
-
-  carrinho.forEach((p, i) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <b>${p.nome}</b>
-
-        <label>
-          Valor (R$):
-          <input
-            type="number"
-            step="0.01"
-            value="${p.valor_editado}"
-            onchange="alterarValor(${i}, this.value)"
-          >
-        </label>
-
-        <button onclick="remover(${i})">Remover</button>
-      </div>
-    `;
-    lista.appendChild(li);
-  });
-
-  atualizarTotal();
-}
-
-function atualizarTotal() {
-  const total = carrinho.reduce(
-    (s, i) => s + Number(i.valor_editado), 0
-  );
-
-  let totalDiv = document.getElementById("totalCarrinho");
-  if (!totalDiv) {
-    totalDiv = document.createElement("div");
-    totalDiv.id = "totalCarrinho";
-    totalDiv.style.marginTop = "10px";
-    totalDiv.style.fontWeight = "bold";
-    document.querySelector(".carrinho").appendChild(totalDiv);
-  }
-
-  totalDiv.innerText = `Total: R$ ${total.toFixed(2)}`;
-}
-
-// ===============================
-// FINALIZAR VENDA
-// ===============================
+/* =========================
+   FINALIZAR VENDA
+========================= */
 async function finalizarVenda() {
   if (carrinho.length === 0) {
     alert("Carrinho vazio");
@@ -177,22 +148,18 @@ async function finalizarVenda() {
   const nome = document.getElementById("clienteNome").value;
   const cpf = document.getElementById("clienteCpf").value;
   const telefone = document.getElementById("clienteTelefone").value;
-  const formaPagamento = document.getElementById("formaPagamento").value;
+  const formaPagamento =
+    document.getElementById("formaPagamento").value;
 
-  if (!nome || !cpf || !telefone) {
+  if (!nome || !cpf || !telefone || !formaPagamento) {
     alert("Preencha os dados do cliente");
-    return;
-  }
-
-  if (!formaPagamento) {
-    alert("Informe a forma de pagamento");
     return;
   }
 
   const token = localStorage.getItem("token");
 
   try {
-    // 1️⃣ Criar venda
+    // Criar venda
     const vendaRes = await fetch(`${API}/vendas`, {
       method: "POST",
       headers: {
@@ -210,7 +177,7 @@ async function finalizarVenda() {
     const vendaData = await vendaRes.json();
     const vendaId = vendaData.venda_id;
 
-    // 2️⃣ Itens
+    // Itens da venda
     for (const item of carrinho) {
       await fetch(`${API}/vendas/${vendaId}/itens`, {
         method: "POST",
@@ -221,50 +188,61 @@ async function finalizarVenda() {
         body: JSON.stringify({
           produto_id: item.id,
           quantidade: 1,
-          valor_unitario: item.valor_editado
+          valor_unitario: item.valor
         })
       });
     }
 
-    // 3️⃣ Finalizar venda
+    // Finalizar
     await fetch(`${API}/vendas/${vendaId}/finalizar`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    // 4️⃣ Nota
-    localStorage.setItem("notaFiscal", JSON.stringify({
-      cliente: { nome, cpf, telefone },
-      itens: carrinho.map(i => ({
-        codigo: i.codigo,
-        nome: i.nome,
-        quantidade: 1,
-        valor: i.valor_editado
-      })),
-      total: carrinho.reduce(
-        (s, i) => s + Number(i.valor_editado), 0
-      ),
-      forma_pagamento: formaPagamento,
-      data: new Date()
-    }));
+    // Salvar NOTA
+    localStorage.setItem(
+      "notaFiscal",
+      JSON.stringify({
+        cliente: { nome, cpf, telefone },
+        itens: carrinho.map(i => ({
+          codigo: i.codigo,
+          nome: i.nome,
+          quantidade: 1,
+          valor: i.valor
+        })),
+        total: carrinho.reduce((s, i) => s + i.valor, 0),
+        forma_pagamento: formaPagamento,
+        data: new Date()
+      })
+    );
 
     carrinho = [];
     renderCarrinho();
-
     window.location.href = "nota.html";
-
   } catch (err) {
     console.error(err);
     alert("Erro ao finalizar venda");
   }
 }
 
-// ===============================
-// NOTA
-// ===============================
+/* =========================
+   AUTO LOAD - VENDAS
+========================= */
 document.addEventListener("DOMContentLoaded", () => {
+  if (document.getElementById("listaProdutos")) {
+    carregarProdutos();
+    document.getElementById("filtroTexto").oninput = renderProdutos;
+    document.getElementById("filtroTipo").onchange = renderProdutos;
+    document.getElementById("filtroModelo").onchange = renderProdutos;
+  }
+});
+
+/* =========================
+   NOTA (PROTEGIDO)
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  if (!document.getElementById("nfCliente")) return;
+
   const nota = localStorage.getItem("notaFiscal");
   if (!nota) return;
 
@@ -273,9 +251,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nfCliente").innerText = data.cliente.nome;
   document.getElementById("nfCpf").innerText = data.cliente.cpf;
   document.getElementById("nfTelefone").innerText = data.cliente.telefone;
-
-  document.getElementById("nfTotal").innerText = data.total.toFixed(2);
-  document.getElementById("nfPagamento").innerText = data.forma_pagamento;
+  document.getElementById("nfTotal").innerText =
+    data.total.toFixed(2);
+  document.getElementById("nfPagamento").innerText =
+    data.forma_pagamento;
   document.getElementById("nfData").innerText =
     new Date(data.data).toLocaleString("pt-BR");
 
@@ -290,16 +269,4 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     tbody.appendChild(tr);
   });
-});
-
-// ===============================
-// AUTO LOAD
-// ===============================
-document.addEventListener("DOMContentLoaded", () => {
-  if (document.getElementById("listaProdutos")) {
-    carregarProdutos();
-    document.getElementById("filtroTexto").oninput = renderProdutos;
-    document.getElementById("filtroTipo").onchange = renderProdutos;
-    document.getElementById("filtroModelo").onchange = renderProdutos;
-  }
 });
