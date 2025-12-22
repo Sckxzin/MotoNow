@@ -1,7 +1,7 @@
 // ===============================
 // CONFIG
 // ===============================
-const API = "https://motonow-production.up.railway.app";
+const API = "https://easygoing-nature-production-ef75.up.railway.app";
 
 let produtos = [];
 let carrinho = [];
