@@ -46,21 +46,29 @@ function logout() {
 // ===============================
 async function carregarProdutos() {
   const token = localStorage.getItem("token");
-  if (!token) return logout();
+
+  if (!token) {
+    console.log("Token não encontrado");
+    return logout();
+  }
 
   try {
     const res = await fetch(`${API}/produtos`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
       }
     });
 
     if (!res.ok) {
-      alert("Erro ao carregar produtos");
-      return;
+      const erro = await res.text();
+      console.error("Erro API:", erro);
+      throw new Error("Erro ao buscar produtos");
     }
 
     produtos = await res.json();
+    console.log("Produtos carregados:", produtos);
     renderProdutos();
 
   } catch (err) {
@@ -68,6 +76,7 @@ async function carregarProdutos() {
     alert("Erro ao carregar produtos");
   }
 }
+
 
 function renderProdutos() {
   const lista = document.getElementById("listaProdutos");
