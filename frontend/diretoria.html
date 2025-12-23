@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>MotoNow | Diretoria</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="diretoria">
+
+  <!-- HEADER -->
+  <header class="header">
+    <h1>MotoNow • Diretoria</h1>
+    <button onclick="logout()">Sair</button>
+  </header>
+
+  <!-- FILTROS -->
+  <section class="filters">
+    <select id="filtroFilial">
+      <option value="">Todas as cidades</option>
+      <!-- Catende, São José, etc (JS preenche depois) -->
+    </select>
+
+    <input type="date" id="dataInicio">
+    <input type="date" id="dataFim">
+
+    <button onclick="carregarDashboard()">Filtrar</button>
+  </section>
+
+  <!-- RESUMOS -->
+  <section class="cards">
+    <div class="card">
+      <h3>Total de Vendas</h3>
+      <p id="totalVendas">R$ 0,00</p>
+    </div>
+
+    <div class="card">
+      <h3>Itens Vendidos</h3>
+      <p id="totalItens">0</p>
+    </div>
+  </section>
+
+  <!-- RESUMO POR CATEGORIA -->
+  <section class="box">
+    <h2>Resumo por Categoria / Produto</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto / Categoria</th>
+          <th>Quantidade</th>
+          <th>Cidade</th>
+        </tr>
+      </thead>
+      <tbody id="resumoProdutos">
+        <!-- JS -->
+      </tbody>
+    </table>
+  </section>
+
+  <!-- HISTÓRICO -->
+  <section class="box">
+    <h2>Histórico de Vendas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Cidade</th>
+          <th>Forma</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="historicoVendas">
+        <!-- JS -->
+      </tbody>
+    </table>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
