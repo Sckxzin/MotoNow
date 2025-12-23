@@ -40,6 +40,12 @@ function logout() {
   localStorage.removeItem("token");
   window.location.href = "index.html";
 }
+if (perfil === "DIRETORIA") {
+  window.location.href = "diretoria.html";
+} else {
+  window.location.href = "app.html";
+}
+
 
 // ===============================
 // PRODUTOS
